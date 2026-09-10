@@ -122,3 +122,24 @@ without confirming it's wanted.
   `notes_003.txt` asked for before tagging). ROADMAP.md's v1.1 section marked
   shipped. **Not committed or tagged in git** — only asked to bump the version and
   update the changelog; committing/tagging needs a separate explicit request.
+- 2026-09-10: User asked to always stage+commit in this repo going forward (saved as
+  personal feedback memory) and confirmed committing/tagging/pushing this session's
+  work: committed as `2f1b186` ("chore: release Agent Scaffolder version 1.1"),
+  tagged `v1.1`, pushed `main` and the tag to `origin` (github.com/hawkers63/
+  Agent-Scaffolder). Push/tag still need an explicit ask each time going forward —
+  only the plain stage+commit step is now automatic.
+- 2026-09-10: User wants a cheaper model while developing, specifically for the
+  Agent Scaffolder app's own generation calls (confirmed via clarifying question —
+  not my own Claude Code session model, which isn't switchable from in-conversation
+  anyway). Set `Run-Agent-Scaffolder.bat` to export `AGENT_SCAFFOLDER_MODEL=claude-haiku-4-5`
+  (documented in README's "Model and data handling"), leaving the Python source's
+  hardcoded fallback at `claude-sonnet-5` untouched — so the launcher now defaults
+  to Haiku 4.5 (~half the per-token cost) but anyone invoking the script another way
+  still gets Sonnet 5 unless they set the env var themselves. Tradeoff flagged: Haiku
+  may produce shallower architecture/testing instructions for a given codebase than
+  Sonnet since this task reasons over a whole packaged repo — fine for cost-conscious
+  iteration during development, worth reconsidering before any release meant to
+  represent best output quality. Not committed yet as part of this same commit; this
+  was a follow-up after the 1.1 push. Not reflected in CHANGELOG.md/APP_VERSION —
+  it's an operational default, not a functional change, unless the user wants it
+  formalized as a release note later.

@@ -45,7 +45,7 @@ Existing files with these names are overwritten. Review generated instructions b
 
 ## Model and data handling
 
-The source default is `claude-sonnet-5`. This release does not certify provider model availability or API compatibility. Set `AGENT_SCAFFOLDER_MODEL` to an identifier available to your account if needed:
+The source default is `claude-sonnet-5`. `Run-Agent-Scaffolder.bat` currently overrides this to `claude-haiku-4-5` for lower cost while the app is under active development — cheaper per token, but a smaller model may write shallower architecture/testing instructions for a given codebase than Sonnet 5 does, since this task involves reasoning about a whole packaged repository. Delete the `set AGENT_SCAFFOLDER_MODEL=...` line in the batch file (or set the variable yourself before launching) to go back to the source default. This release does not certify provider model availability or API compatibility. Set `AGENT_SCAFFOLDER_MODEL` to an identifier available to your account if needed:
 
 ```powershell
 $env:AGENT_SCAFFOLDER_MODEL = "your-available-model-id"
