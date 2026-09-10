@@ -18,6 +18,7 @@ ACCOUNT_NAME = "AnthropicAPIKey"
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECTS_FILE = os.path.join(APP_DIR, "projects.json")
 LAST_PROJECT_FILE = os.path.join(APP_DIR, "last_project.json")
+MODEL_CHOICE_FILE = os.path.join(APP_DIR, "model_choice.json")
 
 # Desktop output folder — generated agents land here so they are easy to find.
 # Prefer USERPROFILE so this works on Hawkeye (C:\Users\Administrator) and other profiles.
@@ -27,9 +28,16 @@ OUTPUT_ROOT = os.path.join(
     "Agent Outputs",
 )
 
-# Env-configurable model. Default: claude-sonnet-5 (current Anthropic Sonnet).
-# Override with AGENT_SCAFFOLDER_MODEL if needed (e.g. claude-sonnet-4-6).
-MODEL = os.environ.get("AGENT_SCAFFOLDER_MODEL", "claude-sonnet-5")
+# Generation model. Resolution order (see resolve_model()): the
+# AGENT_SCAFFOLDER_MODEL env var (power-user/CI override) > the choice saved
+# from Settings (model_choice.json) > DEFAULT_MODEL. Prices are per 1M tokens,
+# input/output, and are display-only context for the Settings picker.
+DEFAULT_MODEL = "claude-sonnet-5"
+MODEL_CHOICES = [
+    ("Claude Haiku 4.5 — fastest & cheapest ($1 / $5)", "claude-haiku-4-5"),
+    ("Claude Sonnet 5 — balanced, default ($2 / $10)", "claude-sonnet-5"),
+    ("Claude Opus 5 — highest quality ($5 / $25)", "claude-opus-5"),
+]
 
 DEFAULT_PROJECTS = [
     {"name": "Desktop Vista", "path": r"D:\Desktop_Vista"},
@@ -115,6 +123,36 @@ def save_last_project_path(path):
         pass
 
 
+def load_model_choice():
+    try:
+        with open(MODEL_CHOICE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            model_id = data.get("model_id")
+            if isinstance(model_id, str) and any(model_id == mid for _, mid in MODEL_CHOICES):
+                return model_id
+    except (OSError, json.JSONDecodeError):
+        pass
+    return None
+
+
+def save_model_choice(model_id):
+    try:
+        with open(MODEL_CHOICE_FILE, "w", encoding="utf-8") as f:
+            json.dump({"model_id": model_id}, f, indent=2)
+    except OSError:
+        pass
+
+
+def resolve_model():
+    """AGENT_SCAFFOLDER_MODEL env var overrides everything; else the Settings
+    choice; else DEFAULT_MODEL."""
+    env_override = os.environ.get("AGENT_SCAFFOLDER_MODEL")
+    if env_override:
+        return env_override
+    return load_model_choice() or DEFAULT_MODEL
+
+
 def safe_folder_name(name):
     """Make a filesystem-safe folder name from a project label or path basename."""
     cleaned = "".join(c if (c.isalnum() or c in (" ", "-", "_")) else "_" for c in name)
@@ -137,7 +175,7 @@ class SettingsWindow(ctk.CTkToplevel):
         super().__init__(*args, **kwargs)
         self.on_saved = on_saved
         self.title("Settings")
-        self.geometry("400x200")
+        self.geometry("400x340")
         self.grab_set()
 
         self.title_label = ctk.CTkLabel(self, text="API Configuration", font=("Segoe UI", 16, "bold"))
@@ -160,7 +198,42 @@ class SettingsWindow(ctk.CTkToplevel):
             self.api_key_entry.insert(0, existing_key)
 
         self.save_btn = ctk.CTkButton(self, text="Save Key", command=self.save_settings)
-        self.save_btn.pack()
+        self.save_btn.pack(pady=(0, 15))
+
+        self.model_label = ctk.CTkLabel(self, text="Generation model:")
+        self.model_label.pack(anchor="w", padx=20)
+
+        self._label_to_id = dict(MODEL_CHOICES)
+        self._id_to_label = {mid: label for label, mid in MODEL_CHOICES}
+
+        env_override = os.environ.get("AGENT_SCAFFOLDER_MODEL")
+        current_id = env_override or load_model_choice() or DEFAULT_MODEL
+        current_label = self._id_to_label.get(current_id, current_id)
+
+        self.model_menu = ctk.CTkOptionMenu(
+            self,
+            values=[label for label, _ in MODEL_CHOICES],
+            width=360,
+            command=self.on_model_selected,
+        )
+        self.model_menu.set(current_label)
+        self.model_menu.pack(padx=20, pady=(4, 4))
+
+        if env_override:
+            self.model_menu.configure(state="disabled")
+            self.model_note = ctk.CTkLabel(
+                self,
+                text=f"Overridden by environment variable AGENT_SCAFFOLDER_MODEL={env_override}",
+                text_color="gray",
+                wraplength=360,
+                justify="left",
+            )
+            self.model_note.pack(padx=20, pady=(0, 10))
+
+    def on_model_selected(self, choice):
+        model_id = self._label_to_id.get(choice)
+        if model_id:
+            save_model_choice(model_id)
 
     def save_settings(self):
         new_key = self.api_key_entry.get().strip()
@@ -400,6 +473,7 @@ class ScaffoldingApp(ctk.CTk):
             if not api_key:
                 raise ScaffoldingError("API Key missing. Please set it in Settings.")
 
+            model_id = resolve_model()
             env = self._build_subprocess_env()
             client = anthropic.Anthropic(api_key=api_key)
 
@@ -469,7 +543,7 @@ class ScaffoldingApp(ctk.CTk):
                 )
 
                 response = client.messages.create(
-                    model=MODEL,
+                    model=model_id,
                     # 4096 and then 8192 both truncated real "comprehensive" docs on
                     # live use (see notes/notes_003.txt addendum). 16000 is Anthropic's
                     # documented default ceiling for a non-streaming call (this one is

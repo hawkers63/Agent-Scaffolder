@@ -13,7 +13,8 @@ htmlcov/
 # Local settings and packaged repository context
 /projects.json
 /last_project.json
-/.repomix-context.xml
+/model_choice.json
+/.repomix-context*.xml
 repomix-output.*
 # Credentials belong in the OS keyring
 .env

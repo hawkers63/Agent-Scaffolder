@@ -48,6 +48,31 @@ memory and only hit disk after all three requests succeed, which resolves the re
       tokens actually generated and not by this ceiling, raising it doesn't add cost
       unless a response genuinely needs the room.
 
+## Since 1.1 (unreleased — not yet in a tagged version)
+- [x] **In-app generation model picker**, added 2026-09-10 at explicit user request
+      (previously "rejected without an explicit product request" per notes_002.txt §8;
+      that condition is now met). Settings gained a "Generation model:" dropdown listing
+      the three current Anthropic tiers with live per-1M-token pricing: Claude Haiku 4.5
+      ($1/$5), Claude Sonnet 5 ($2/$10, the previous hardcoded default), Claude Opus 5
+      ($5/$25). Selection saves immediately to `model_choice.json` (local, gitignored,
+      same pattern as `projects.json`). Resolution order: `AGENT_SCAFFOLDER_MODEL` env
+      var (unchanged power-user/CI override — the picker disables itself and shows the
+      active override when this is set) > the Settings choice > `DEFAULT_MODEL`
+      (`claude-sonnet-5`, unchanged). Correcting a mid-conversation assumption: Sonnet
+      4.6 was considered as a "cheaper" alternative but confirmed at $3/$15 per 1M —
+      pricier than Sonnet 5 for an older model — so it was deliberately left out of the
+      menu. `model_choice.json` is currently seeded to `claude-haiku-4-5` on this
+      machine for cost-conscious iteration during development; change it via Settings
+      any time. Live-verified: dropdown renders with correct pricing/em-dashes, opens
+      and lists all three, selection persists to disk immediately and survives a
+      dialog close/reopen, env-var-override disabling was code-reviewed (not yet
+      GUI-tested with a real env var set). This superseded an earlier, cruder attempt
+      at the same goal (a `Run-Agent-Scaffolder.bat` hardcoded env var) — reverted in
+      favor of the picker.
+- Also fixed while in this area: `.gitignore`'s `/.repomix-context.xml` entry didn't
+  match the unique-per-run naming introduced in v1.1 (`.repomix-context-<hex>.xml`) —
+  updated to `/.repomix-context*.xml`.
+
 ## v1.2 — UX polish
 - [ ] Add a `_job_running` guard and busy cursor during generation; document (or handle)
       close-during-job.
@@ -86,9 +111,10 @@ Bigger bets — worth a decision before building:
   consumer, generating straight into that convention (optionally still exporting the
   current freeform docs for other assistants) would make outputs usable immediately
   instead of requiring manual wiring.
-- **Multi-provider model choice.** Currently hardcoded to Anthropic; a model/provider
-  picker was explicitly rejected in the 1.0 UI review as scope creep — revisit only if
-  there's a real need to target non-Claude assistants.
+- **Multi-provider model choice.** An Anthropic-only model-*tier* picker (Haiku/Sonnet/
+  Opus) shipped 2026-09-10 (see "Since 1.1" above). True multi-*provider* support (a
+  non-Anthropic backend) is a separate, much larger idea and remains unrequested —
+  revisit only if there's a real need to target non-Claude assistants.
 - **Generation history.** Keep previous outputs (timestamped) instead of silent
   overwrite, so a bad generation doesn't destroy a working set of instructions.
 - **Live API/model verification.** No live Anthropic call has ever been exercised in

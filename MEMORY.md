@@ -63,18 +63,28 @@ Architecture/robustness (notes_001.txt):
 UI/UX (notes_002.txt):
 - No busy cursor, no `_job_running` guard against a second concurrent Generate, no
   documented close-during-job behaviour.
-- Window title ("Agent Scaffolder v1.0") vs in-window heading ("Project Agent
-  Generator") disagree; `agents.md` references a missing icon (`mstscax_13417.ico`
-  exists in `icon/` but is never wired up via `iconbitmap`).
+- Window title ("Agent Scaffolder v1.1" as of the version bump) vs in-window heading
+  ("Project Agent Generator") disagree; `agents.md` references a missing icon
+  (`mstscax_13417.ico` exists in `icon/` but is never wired up via `iconbitmap`).
 - Docs inconsistently reference `notes/notes1.txt` / `notesN.txt` instead of the actual
   `notes_NNN.txt` naming.
+
+## Model selection (added 2026-09-10, explicit user request)
+Settings has a "Generation model:" picker (Haiku 4.5 / Sonnet 5 / Opus 5, live pricing
+in the labels) — see `resolve_model()`, `MODEL_CHOICES`, `load_model_choice()` /
+`save_model_choice()` in `agent_scaffolder.py`. Resolution order: `AGENT_SCAFFOLDER_MODEL`
+env var > `model_choice.json` (local, gitignored) > `DEFAULT_MODEL` (`claude-sonnet-5`).
+Currently seeded to `claude-haiku-4-5` on this machine per the user's cost-conscious
+development request — change any time via Settings. Full detail: ROADMAP.md "Since 1.1".
+**Note for future sessions:** "model/prompt picker UI" is no longer in the rejected
+list below — it shipped. Don't re-reject it if asked to extend it further.
 
 ## Explicitly rejected (per notes_002.txt) unless the user asks again
 Progress bar/spinner, grid()/place()/ttk/Qt/web UI, Tk variable bindings, a second
 credential store, writing generated files into the target repo, changing the Desktop
-output root, a model/prompt picker UI, dark-mode toggle — these were deliberately
-scoped out of the compact-utility design. Don't reintroduce them under a "polish" pass
-without confirming it's wanted.
+output root, dark-mode toggle — these were deliberately scoped out of the compact-utility
+design. Don't reintroduce them under a "polish" pass without confirming it's wanted.
+(A model picker was on this list originally; it's now implemented — see above.)
 
 ## Session log
 - 2026-09-10: First review session. Confirmed v1.0, read full source and both notes
@@ -143,3 +153,25 @@ without confirming it's wanted.
   was a follow-up after the 1.1 push. Not reflected in CHANGELOG.md/APP_VERSION —
   it's an operational default, not a functional change, unless the user wants it
   formalized as a release note later.
+- 2026-09-10: User asked for a real in-app choice menu instead of the batch-file env
+  var hack (also flagged that Sonnet 4.6 might be a cheaper option — checked live
+  pricing via the claude-api skill and it's actually $3/$15 per 1M, pricier than
+  Sonnet 5's $2/$10, so it was deliberately left out of the menu; confirmed with the
+  user via AskUserQuestion before building). Implemented the picker described above:
+  reverted the `Run-Agent-Scaffolder.bat` env var line, added `MODEL_CHOICES` /
+  `resolve_model()` / `load_model_choice()` / `save_model_choice()` to
+  `agent_scaffolder.py`, added the Settings dropdown, seeded `model_choice.json` to
+  Haiku 4.5, fixed the stale `.gitignore` temp-XML pattern, and updated README. Live
+  Windows verification: launched the app, opened Settings, confirmed the dropdown
+  shows all three tiers with correct pricing and em-dash rendering (an earlier
+  console-only check had shown "�" for the em-dash — confirmed via UTF-8 byte
+  inspection that was only a git-bash terminal display quirk, not a real encoding bug,
+  before relying on the GUI render to be sure). Selected Sonnet 5, confirmed
+  `model_choice.json` updated immediately; switched back to Haiku 4.5. Did not
+  GUI-test the disabled/overridden state (env var set) — reasoned from code only.
+  **Operational note for future sessions:** this Windows environment's terminal
+  window tends to auto-restore/refocus itself whenever new output is printed, which
+  can silently steal a queued mouse click meant for the app. When driving the GUI via
+  simulated clicks, minimize the terminal window in the *same* PowerShell call that
+  performs the click (or immediately before screenshotting) rather than as a separate
+  prior step, or clicks can land on the terminal instead of the intended target.

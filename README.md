@@ -41,16 +41,20 @@ Three documents are saved under `%USERPROFILE%\Desktop\Agent Outputs\<project>`:
 - `bug_hunter.md` — testing and debugging instructions.
 - `enhancement_agent.md` — feature and UI guidance.
 
-Existing files with these names are overwritten. Review generated instructions before using them. Repomix writes temporary `.repomix-context.xml` in the application directory; the worker attempts cleanup on completion or failure.
+Existing files with these names are overwritten. Review generated instructions before using them. Repomix writes a temporary `.repomix-context-<random>.xml` in the application directory (a fresh unique name per run); the worker attempts cleanup on completion or failure.
 
 ## Model and data handling
 
-The source default is `claude-sonnet-5`. `Run-Agent-Scaffolder.bat` currently overrides this to `claude-haiku-4-5` for lower cost while the app is under active development — cheaper per token, but a smaller model may write shallower architecture/testing instructions for a given codebase than Sonnet 5 does, since this task involves reasoning about a whole packaged repository. Delete the `set AGENT_SCAFFOLDER_MODEL=...` line in the batch file (or set the variable yourself before launching) to go back to the source default. This release does not certify provider model availability or API compatibility. Set `AGENT_SCAFFOLDER_MODEL` to an identifier available to your account if needed:
+Choose the generation model in **Settings** — Claude Haiku 4.5 (fastest & cheapest, $1/$5 per 1M tokens), Claude Sonnet 5 (balanced, default, $2/$10), or Claude Opus 5 (highest quality, $5/$25). A cheaper model may write shallower architecture/testing instructions for a given codebase than a more capable one, since this task involves reasoning about a whole packaged repository. The choice is saved to `model_choice.json` (local, gitignored, like `projects.json`).
+
+For power users and CI, set `AGENT_SCAFFOLDER_MODEL` before launching to override the Settings choice entirely (the Settings picker disables itself and shows the active override when this is set) with any identifier available to your account:
 
 ```powershell
 $env:AGENT_SCAFFOLDER_MODEL = "your-available-model-id"
 python agent_scaffolder.py
 ```
+
+This release does not certify provider model availability or API compatibility.
 
 Generation sends the selected repository's packaged source to Anthropic in three sequential requests and can incur API charges. Review the target project's Repomix exclusions before generation; this checkout's `.gitignore` does not protect other target projects. Do not rely on packaging alone to remove sensitive content.
 
