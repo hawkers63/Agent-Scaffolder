@@ -107,7 +107,11 @@ memory and only hit disk after all three requests succeed, which resolves the re
 - [ ] Lightweight in-app project manager (add/edit/remove `projects.json` entries) as
       its own compact `CTkToplevel`, following the existing load/save JSON pattern.
 - [ ] Regenerate a single output file instead of always running all three.
-- [ ] Cancel button for an in-flight generation (join/kill the subprocess only).
+- [x] Cancel button for an in-flight generation (join/kill the subprocess only).
+      **Shipped in 1.4** (2026-09-11): Repomix now runs via `Popen` so Cancel can
+      terminate it, plus a cancellation checkpoint before each Anthropic call and
+      before writing files (a request already sent can't be recalled, but no
+      further paid calls happen after cancel). See `notes/notes_007.txt`.
 - [ ] Bounded Repomix subprocess timeout.
 - [ ] Optional Repomix exclusion passthrough so a target project's own excludes are
       respected (README already warns this checkout's `.gitignore` doesn't protect

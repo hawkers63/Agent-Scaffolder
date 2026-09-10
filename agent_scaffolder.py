@@ -17,7 +17,7 @@ import anthropic
 import keyring
 from tkinter import filedialog, messagebox
 
-APP_VERSION = "1.3"
+APP_VERSION = "1.4"
 
 # Credential Manager service for Anthropic API key (never store keys in files)
 SERVICE_NAME = "AgentScaffolderApp"
@@ -60,6 +60,10 @@ OTHER_LABEL = "Other..."
 
 class ScaffoldingError(Exception):
     """A recognized generation failure with a message safe to show the user."""
+
+
+class GenerationCancelled(Exception):
+    """Raised internally when the user cancels an in-flight generation."""
 
 
 def ensure_projects_file():
@@ -282,6 +286,8 @@ class ScaffoldingApp(ctk.CTk):
         self.settings_window = None
         self._suppress_project_event = False
         self._job_running = False
+        self._cancel_requested = False
+        self._current_process = None
         self.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self.title_label = ctk.CTkLabel(
@@ -308,6 +314,16 @@ class ScaffoldingApp(ctk.CTk):
 
         self.generate_btn = ctk.CTkButton(self, text="Generate Agents", command=self.start_generation)
         self.generate_btn.pack(pady=5)
+
+        self.cancel_btn = ctk.CTkButton(
+            self,
+            text="Cancel",
+            fg_color="#8B2E2E",
+            hover_color="#6E2424",
+            command=self.cancel_generation,
+            state="disabled",
+        )
+        self.cancel_btn.pack(pady=5)
 
         self.settings_btn = ctk.CTkButton(
             self,
@@ -463,14 +479,32 @@ class ScaffoldingApp(ctk.CTk):
         target_dir = self.target_dir
         output_dir = self._output_folder_for_selection()
         self._job_running = True
+        self._cancel_requested = False
         self.configure(cursor="wait")
         self.generate_btn.configure(state="disabled")
         self.settings_btn.configure(state="disabled")
         self.project_menu.configure(state="disabled")
+        self.cancel_btn.configure(state="normal")
         self.update_status("Packaging codebase with Repomix...")
         threading.Thread(
             target=self.run_scaffolding, args=(target_dir, output_dir), daemon=True
         ).start()
+
+    def cancel_generation(self):
+        """Best-effort cancel: terminates the Repomix subprocess if it's still
+        running, and skips any remaining Anthropic calls at the next checkpoint.
+        Cannot recall an Anthropic request already in flight."""
+        if not self._job_running or self._cancel_requested:
+            return
+        self._cancel_requested = True
+        self.cancel_btn.configure(state="disabled")
+        self.update_status("Cancelling...")
+        proc = self._current_process
+        if proc is not None and proc.poll() is None:
+            try:
+                proc.terminate()
+            except OSError:
+                pass
 
     def _on_close(self):
         if self._job_running:
@@ -529,21 +563,29 @@ class ScaffoldingApp(ctk.CTk):
 
             repomix_bin = shutil.which("repomix", path=env.get("PATH"))
             # Absolute --output under APP_DIR; still run against the selected project (cwd=target_dir).
+            # Popen (not run) so cancel_generation() can terminate it from the UI thread.
+            # Note: in the shell=True fallback, terminate() only kills the cmd.exe
+            # wrapper, not a repomix process it may have spawned underneath.
             if repomix_bin:
-                subprocess.run(
+                proc = subprocess.Popen(
                     [repomix_bin, "--style", "xml", "--output", xml_path, "--quiet"],
                     cwd=target_dir,
                     env=env,
-                    check=True,
                 )
             else:
-                subprocess.run(
+                proc = subprocess.Popen(
                     f'repomix --style xml --output "{xml_path}" --quiet',
                     cwd=target_dir,
                     env=env,
                     shell=True,
-                    check=True,
                 )
+            self._current_process = proc
+            returncode = proc.wait()
+            self._current_process = None
+            if self._cancel_requested:
+                raise GenerationCancelled()
+            if returncode != 0:
+                raise subprocess.CalledProcessError(returncode, "repomix")
 
             with open(xml_path, "r", encoding="utf-8") as f:
                 repo_context = f.read()
@@ -577,6 +619,8 @@ class ScaffoldingApp(ctk.CTk):
             # leaves the previous output files exactly as they were.
             generated = {}
             for agent in agents:
+                if self._cancel_requested:
+                    raise GenerationCancelled()
                 self.update_status(f"Generating {agent['name']}...")
 
                 prompt_text = (
@@ -606,6 +650,9 @@ class ScaffoldingApp(ctk.CTk):
 
                 generated[agent["name"]] = _extract_text_response(response, agent["name"])
 
+            if self._cancel_requested:
+                raise GenerationCancelled()
+
             self.update_status("Writing generated files...")
             for name, text in generated.items():
                 out_path = os.path.join(output_dir, name)
@@ -616,6 +663,8 @@ class ScaffoldingApp(ctk.CTk):
             self.update_status(done_msg)
             self.after(0, lambda d=output_dir: self._open_output_folder(d))
 
+        except GenerationCancelled:
+            self.update_status("Cancelled.")
         except subprocess.CalledProcessError as e:
             self._show_error("Repomix Error", f"Repomix failed: {e}")
         except anthropic.AuthenticationError:
@@ -637,9 +686,11 @@ class ScaffoldingApp(ctk.CTk):
 
     def reset_buttons(self):
         self._job_running = False
+        self._current_process = None
         self.configure(cursor="")
         self.settings_btn.configure(state="normal")
         self.project_menu.configure(state="normal")
+        self.cancel_btn.configure(state="disabled")
         # Restore button enablement without clobbering the success/error text
         # the job just posted; the next user action refreshes it normally.
         self.refresh_ui_state(update_status_text=False)

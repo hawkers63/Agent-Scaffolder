@@ -18,7 +18,7 @@ and are now the dev-instructions the maintainer follows when working on the tool
 itself (see `CONTRIBUTING.md`).
 
 ## Current version
-**1.3** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
+**1.4** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
 Verified by source review + `py_compile` only, per the batched testing cadence
 adopted this session (see "Testing cadence" below and `ROADMAP.md` intro): versions
 1.3-1.7 ship without a live Anthropic/Repomix run to keep real API cost down (a
@@ -46,6 +46,9 @@ asking — the whole point is keeping cost predictable.
 - `refresh_ui_state()` is the single source of truth for button/status enablement — any
   new control should extend it rather than adding one-off enable checks.
 - `_suppress_project_event` must guard every programmatic `project_menu.set(...)`.
+- `_job_running` / `_cancel_requested` / `_current_process` track an in-flight
+  generation end-to-end; any new control that starts, blocks on, or cancels a job
+  should extend these rather than adding parallel state (added 1.3/1.4).
 - Output contract: `Desktop/Agent Outputs/<project>` — do not relocate without being asked.
 - `projects.json` / `last_project.json` are local, gitignored, user-editable while the
   app is closed.
@@ -194,5 +197,10 @@ design. Don't reintroduce them under a "polish" pass without confirming it's wan
   finish the remaining v1.2 UX-polish items, then pull two v1.3 feature items
   (cancel button, single-file regeneration) to round out to five. Implemented 1.3
   (`_job_running` guard, busy cursor, close-during-job confirmation) this session —
-  see `notes/notes_006.txt`. 1.8 is reserved as the live-test/fix checkpoint for
-  this batch; do not skip it.
+  see `notes/notes_006.txt`. Implemented 1.4 (Cancel button; Repomix invocation
+  switched to `Popen` so it's terminable; cancellation checkpoints before each
+  Anthropic call and before the file-write step) — see `notes/notes_007.txt`. Known
+  limit: an Anthropic call already in flight can't be recalled, only subsequent
+  calls are skipped; the shell=True Repomix fallback path only kills the cmd.exe
+  wrapper, not a grandchild process. 1.8 is reserved as the live-test/fix
+  checkpoint for this batch; do not skip it.

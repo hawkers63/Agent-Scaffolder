@@ -1,0 +1,68 @@
+AGENT SCAFFOLDER — CANCEL BUTTON FOR IN-FLIGHT GENERATION
+Date: 11 September 2026
+Report: notes_007.txt
+Predecessor: notes_006.txt (v1.3 job guard/busy cursor/close-during-job)
+Author role: Feature development and UI/UX specialist
+
+1. PURPOSE
+Ship the ROADMAP v1.3 item "Cancel button for an in-flight generation
+(join/kill the subprocess only)". Second release of the batch-1 testing
+cadence (1.3-1.7 code-only, 1.8 live-test checkpoint).
+
+2. CHANGES
+- agent_scaffolder.py: added `self._cancel_requested` and
+  `self._current_process`, initialised in `__init__` and reset at the start
+  of each job in `start_generation` / cleared in `reset_buttons`.
+- New `GenerationCancelled` exception (module level, alongside
+  `ScaffoldingError`) - raised internally, never shown as an error dialog.
+- New "Cancel" button (red, disabled by default) between Generate Agents and
+  Settings. Enabled in `start_generation`, disabled in `reset_buttons` and
+  immediately on click in `cancel_generation`.
+- `cancel_generation()`: sets `_cancel_requested`, updates status to
+  "Cancelling...", and calls `.terminate()` on `self._current_process` if it
+  is still running.
+- Repomix invocation switched from `subprocess.run(..., check=True)` to
+  `subprocess.Popen` + `.wait()`, storing the handle in
+  `self._current_process` so it's reachable from the UI thread. After
+  `.wait()` returns, checks `_cancel_requested` first (raises
+  `GenerationCancelled`) before checking the exit code (raises
+  `CalledProcessError` as before for a genuine Repomix failure) - this keeps
+  a cancelled run from surfacing as a spurious "Repomix failed" error.
+- Added `if self._cancel_requested: raise GenerationCancelled()` checkpoints:
+  before each of the three Anthropic calls in the generation loop, and once
+  more after the loop before the file-write step.
+- `except GenerationCancelled: self.update_status("Cancelled.")` added ahead
+  of the existing `ScaffoldingError` / broad `Exception` handlers, so a
+  cancel reads as a clean status message, not an error popup.
+- APP_VERSION bumped to 1.4. CHANGELOG.md and ROADMAP.md updated.
+
+3. SCOPE / KNOWN LIMITATION
+Per the roadmap wording ("join/kill the subprocess only"), this does not
+attempt to cancel an Anthropic request already sent to the API - the SDK
+call is a blocking, non-streaming `client.messages.create()`; there is no
+cheap way to abort it mid-flight without moving to a lower-level
+cancellable transport, which is out of scope here. Cancelling mid-request
+still lets that one call finish, but guarantees no further calls happen
+(useful both for responsiveness and for capping cost on an unwanted run).
+Also, on the `shell=True` Repomix fallback path (only reached if
+`shutil.which("repomix", ...)` fails to resolve a binary), `.terminate()`
+kills the `cmd.exe` wrapper Windows spawns for a shell command, not
+necessarily a `repomix`/node grandchild process underneath it. Documented
+in CHANGELOG; the primary (`repomix_bin` found) path terminates cleanly
+since it's a direct process handle.
+
+4. VERIFICATION
+PASS: `python -m py_compile agent_scaffolder.py`.
+PASS: Source review of the cancellation-checkpoint placement (before each
+paid call and before the write step) and of button state transitions across
+`start_generation` / `cancel_generation` / `reset_buttons` - no path leaves
+Cancel enabled after a job ends or disabled while one is running.
+NOT DONE (deliberately, per the batched testing cadence): a live pass that
+actually starts a generation and clicks Cancel to confirm the Repomix
+process dies and the status line reads "Cancelled." without an error
+dialog. Deferred to the 1.8 live-test checkpoint.
+
+5. FOLLOW-UP
+If a future release moves Anthropic calls to streaming, revisit whether an
+in-flight call itself can be aborted (closing the stream) rather than only
+skipping subsequent calls.

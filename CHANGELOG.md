@@ -4,6 +4,21 @@
 
 Nothing yet.
 
+## 1.4 — 2026-09-11
+
+Batch-1 UX polish, continued (see `notes/notes_007.txt`).
+
+- **Cancel button:** a new "Cancel" button is enabled while a generation is in
+  flight. It terminates the running Repomix subprocess and stops before any
+  further Anthropic calls; a request already sent to the API cannot be
+  recalled, but this stops the run before any *subsequent* paid calls, which
+  also doubles as a cost control. The Repomix invocation switched from
+  `subprocess.run` to `subprocess.Popen` so it can be terminated from the UI
+  thread. Cancelling shows "Cancelled." in the status line rather than an
+  error dialog. Known limitation: on the rare shell=True Repomix fallback
+  path (used only if `repomix` isn't found via `shutil.which`), terminate()
+  kills the `cmd.exe` wrapper but not a grandchild process it may have spawned.
+
 ## 1.3 — 2026-09-11
 
 Batch-1 UX polish (session testing runs live verification only every 6th release —
