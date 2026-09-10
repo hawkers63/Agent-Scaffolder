@@ -64,8 +64,9 @@ UI/UX (notes_002.txt):
 - No busy cursor, no `_job_running` guard against a second concurrent Generate, no
   documented close-during-job behaviour.
 - Window title ("Agent Scaffolder v1.1" as of the version bump) vs in-window heading
-  ("Project Agent Generator") disagree; `agents.md` references a missing icon
-  (`mstscax_13417.ico` exists in `icon/` but is never wired up via `iconbitmap`).
+  ("Project Agent Generator") — **resolved 2026-09-10** in notes_005: heading is now
+  "Agent Scaffolder". `icon/mstscax_13417.ico` remains in-tree but is **not** wired via
+  `iconbitmap`/`iconphoto` and is not documented as a cleared product icon.
 - Docs inconsistently reference `notes/notes1.txt` / `notesN.txt` instead of the actual
   `notes_NNN.txt` naming.
 

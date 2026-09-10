@@ -82,8 +82,12 @@ memory and only hit disk after all three requests succeed, which resolves the re
       on 2026-09-10 (customtkinter 5.2.2) showed clicking the already-selected `Other...`
       *does* refire `on_project_selected` and reopens the folder picker as expected. No
       fix needed here; removed from the backlog.
-- [ ] Resolve window identity: one product name across the OS title bar and in-window
+- [x] Resolve window identity: one product name across the OS title bar and in-window
       heading; wire up a rights-cleared icon or stop documenting one that isn't shipped.
+      Done 2026-09-10: in-window heading is now "Agent Scaffolder" (version stays in the
+      OS title only). No custom icon is wired — `icon/mstscax_13417.ico` is not treated
+      as a rights-cleared product asset and is not passed to `iconbitmap`/`iconphoto`.
+      Docs updated accordingly; see `notes/notes_005.txt`.
 - [ ] `status_label` `justify="left"`; small copy pass on status strings and Settings.
 - [ ] Align docs to the real `notes/notes_NNN.txt` naming (README, CHANGELOG,
       CONTRIBUTING currently say `notes1.txt` / `notesN.txt`).

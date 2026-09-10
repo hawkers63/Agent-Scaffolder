@@ -275,7 +275,7 @@ class ScaffoldingApp(ctk.CTk):
         self._suppress_project_event = False
 
         self.title_label = ctk.CTkLabel(
-            self, text="Project Agent Generator", font=("Segoe UI", 18, "bold")
+            self, text="Agent Scaffolder", font=("Segoe UI", 18, "bold")
         )
         self.title_label.pack(pady=(16, 4))
 

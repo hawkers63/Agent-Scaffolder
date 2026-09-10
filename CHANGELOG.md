@@ -8,6 +8,7 @@ Post-`v1.1` changes on `main` that are not yet a new tagged release:
 - Launcher no longer forces `AGENT_SCAFFOLDER_MODEL` in `Run-Agent-Scaffolder.bat` (superseded by the picker).
 - Proprietary **LICENSE** (All Rights Reserved, hawkers63, 2026), copyright header on `agent_scaffolder.py`, stronger README copyright section, and `projects.example.json` template.
 - `.gitignore` extended for `config.json` / temp / backup patterns; Repomix ignore pattern updated to `/.repomix-context*.xml`.
+- **Window identity:** main-window heading aligned to "Agent Scaffolder" (matches the OS title product name; version remains in the title bar only). No custom window icon is wired — docs no longer present `mstscax_13417.ico` as a shipped product icon (`notes/notes_005.txt`).
 
 ## 1.1 — 2026-09-10
 
