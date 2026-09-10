@@ -4,6 +4,21 @@
 
 Nothing yet.
 
+## 1.5 — 2026-09-11
+
+Batch-1 UX polish, copy pass (see `notes/notes_008.txt`).
+
+- `status_label` now sets `justify="left"` (previously unset — only mattered
+  once a status message wrapped to more than one line).
+- Copy pass: "API key required — set it in Settings" (was a hyphen, now an
+  em dash matching the rest of the app's punctuation style); the Settings
+  window's inner heading changed from "API Configuration" to "Settings" to
+  match its title bar and the fact it now also holds the model picker; the
+  environment-override note now explains *why* the model dropdown is
+  disabled instead of just restating the variable; the close-during-job
+  confirmation now points at the new Cancel button as the non-destructive
+  alternative.
+
 ## 1.4 — 2026-09-11
 
 Batch-1 UX polish, continued (see `notes/notes_007.txt`).

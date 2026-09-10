@@ -17,7 +17,7 @@ import anthropic
 import keyring
 from tkinter import filedialog, messagebox
 
-APP_VERSION = "1.4"
+APP_VERSION = "1.5"
 
 # Credential Manager service for Anthropic API key (never store keys in files)
 SERVICE_NAME = "AgentScaffolderApp"
@@ -197,7 +197,7 @@ class SettingsWindow(ctk.CTkToplevel):
             except Exception:
                 pass
 
-        self.title_label = ctk.CTkLabel(self, text="API Configuration", font=("Segoe UI", 16, "bold"))
+        self.title_label = ctk.CTkLabel(self, text="Settings", font=("Segoe UI", 16, "bold"))
         self.title_label.pack(pady=(15, 10))
 
         self.key_label = ctk.CTkLabel(self, text="Anthropic API Key:")
@@ -242,7 +242,10 @@ class SettingsWindow(ctk.CTkToplevel):
             self.model_menu.configure(state="disabled")
             self.model_note = ctk.CTkLabel(
                 self,
-                text=f"Overridden by environment variable AGENT_SCAFFOLDER_MODEL={env_override}",
+                text=(
+                    "Model choice is locked by the AGENT_SCAFFOLDER_MODEL "
+                    f"environment variable ({env_override})."
+                ),
                 text_color="gray",
                 wraplength=360,
                 justify="left",
@@ -309,7 +312,9 @@ class ScaffoldingApp(ctk.CTk):
         )
         self.path_label.pack(padx=24, pady=(0, 8))
 
-        self.status_label = ctk.CTkLabel(self, text="Ready", text_color="gray", wraplength=460)
+        self.status_label = ctk.CTkLabel(
+            self, text="Ready", text_color="gray", wraplength=460, justify="left"
+        )
         self.status_label.pack(pady=(0, 10))
 
         self.generate_btn = ctk.CTkButton(self, text="Generate Agents", command=self.start_generation)
@@ -447,7 +452,7 @@ class ScaffoldingApp(ctk.CTk):
         elif not key_ok:
             self.generate_btn.configure(state="disabled")
             if update_status_text:
-                self.status_label.configure(text="API key required - enter it in Settings")
+                self.status_label.configure(text="API key required — set it in Settings")
         else:
             self.generate_btn.configure(state="disabled")
             if update_status_text:
@@ -510,8 +515,9 @@ class ScaffoldingApp(ctk.CTk):
         if self._job_running:
             proceed = messagebox.askyesno(
                 "Generation in progress",
-                "A generation is still running. Closing now will abandon it and may "
-                "leave a temporary Repomix file behind. Close anyway?",
+                "A generation is still running — use Cancel instead if you just want "
+                "to stop it. Closing now will abandon the job and may leave a "
+                "temporary Repomix file behind. Close anyway?",
                 icon="warning",
             )
             if not proceed:

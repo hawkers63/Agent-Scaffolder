@@ -18,7 +18,7 @@ and are now the dev-instructions the maintainer follows when working on the tool
 itself (see `CONTRIBUTING.md`).
 
 ## Current version
-**1.4** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
+**1.5** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
 Verified by source review + `py_compile` only, per the batched testing cadence
 adopted this session (see "Testing cadence" below and `ROADMAP.md` intro): versions
 1.3-1.7 ship without a live Anthropic/Repomix run to keep real API cost down (a
@@ -202,5 +202,8 @@ design. Don't reintroduce them under a "polish" pass without confirming it's wan
   Anthropic call and before the file-write step) — see `notes/notes_007.txt`. Known
   limit: an Anthropic call already in flight can't be recalled, only subsequent
   calls are skipped; the shell=True Repomix fallback path only kills the cmd.exe
-  wrapper, not a grandchild process. 1.8 is reserved as the live-test/fix
+  wrapper, not a grandchild process. Implemented 1.5 (`status_label
+  justify="left"`, copy pass on status strings + Settings heading + env-override
+  note + close-during-job dialog) — see `notes/notes_008.txt`. This closes out
+  the ROADMAP v1.2 section entirely. 1.8 is reserved as the live-test/fix
   checkpoint for this batch; do not skip it.

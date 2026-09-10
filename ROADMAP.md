@@ -99,7 +99,8 @@ memory and only hit disk after all three requests succeed, which resolves the re
       OS title only). Product icon is `icon/Agent.Scaffolder.ico`, wired via `iconbitmap`
       on ScaffoldingApp and SettingsWindow (200ms re-apply for CTk). `mstscax_13417.ico`
       removed. Maintainer confirmed title-bar icon after relaunch; see `notes/notes_005.txt`.
-- [ ] `status_label` `justify="left"`; small copy pass on status strings and Settings.
+- [x] `status_label` `justify="left"`; small copy pass on status strings and Settings.
+      **Shipped in 1.5** (2026-09-11). See `notes/notes_008.txt`.
 - [ ] Align docs to the real `notes/notes_NNN.txt` naming (README, CHANGELOG,
       CONTRIBUTING currently say `notes1.txt` / `notesN.txt`).
 
