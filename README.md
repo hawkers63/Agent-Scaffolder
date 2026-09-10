@@ -6,9 +6,9 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?logo=windows&logoColor=white)](https://github.com/hawkers63/Agent-Scaffolder)
 [![CI](https://github.com/hawkers63/Agent-Scaffolder/actions/workflows/ci.yml/badge.svg)](https://github.com/hawkers63/Agent-Scaffolder/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Proprietary%20%2F%20All%20Rights%20Reserved-red)](LICENSE)
-[![Release](https://img.shields.io/badge/Release-v1.1-success)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/Release-v1.2-success)](CHANGELOG.md)
 
-Version **1.1** — a Windows desktop utility that packages project source with Repomix and generates Markdown configuration documents for an AI assistant. It does **not** generate or run an autonomous Python agent.
+Version **1.2** — a Windows desktop utility that packages project source with Repomix and generates Markdown configuration documents for an AI assistant. It does **not** generate or run an autonomous Python agent.
 
 Built as a single-file CustomTkinter app using the Anthropic API. Pick a project, save your API key in Settings, choose a model, then **Generate Agents**.
 
@@ -31,13 +31,12 @@ Hand-writing agent instructions for every codebase is slow and drifts out of dat
 
 | | |
 | --- | --- |
-| **Current** | **v1.1** (tagged `v1.1`, 2026-09-10) |
-| **App version** | `APP_VERSION = "1.1"` in `agent_scaffolder.py` |
-| **Highlights** | Reliability pass over 1.0: safer worker lifecycle, validated project JSON, atomic output writes, unique Repomix temp files, Settings error handling, `max_tokens` raised to 16000 after live truncation |
+| **Current** | **[v1.2](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.2)** (2026-09-10) |
+| **App version** | `APP_VERSION = "1.2"` in `agent_scaffolder.py` |
+| **Highlights** | Window identity + `Agent.Scaffolder.ico`; in-app model picker; proprietary LICENSE / copyright; README Release section |
 | **Changelog** | Full notes in [CHANGELOG.md](CHANGELOG.md) |
-| **Tags** | [`v1.1`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.1) · [`v1.0`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.0) |
+| **Tags** | [`v1.2`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.2) · [`v1.1`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.1) · [`v1.0`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.0) |
 
-**On `main` since v1.1 (not yet a new tagged release):** in-app generation model menu (Settings), proprietary LICENSE / copyright notices, `projects.example.json`, window identity + `Agent.Scaffolder.ico`. See the **Unreleased** section in the changelog.
 
 > Maintainers: when you cut a release, bump `APP_VERSION`, update this **Release** table, add a CHANGELOG entry, and tag (`vX.Y`). Prefer creating a matching GitHub Release so the badges and links stay honest.
 

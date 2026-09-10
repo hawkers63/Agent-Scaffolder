@@ -1,7 +1,6 @@
 # ROADMAP.md — Agent Scaffolder
 
-Current version: **1.1** (released 2026-09-10, live-verified — see
-`notes/notes_004.txt`). This roadmap sequences the work identified in the maintainer's
+Current version: **1.2** (released 2026-09-10 — see `CHANGELOG.md` and `notes/notes_005.txt`; 1.1 live verification remains in `notes/notes_004.txt`). This roadmap sequences the work identified in the maintainer's
 own review notes (`notes/notes_001.txt`, `notes/notes_002.txt`) plus ideas for turning
 this from a working utility into a more capable desktop application. Nothing here is
 committed until picked up in a session — treat it as a backlog. Record actual releases

@@ -21,7 +21,7 @@ product icon (replacing the previous uncleared mstscax extract).
 - icon/README.md documents Agent.Scaffolder.ico as the product icon.
 - agents/agents.md file-structure block updated accordingly.
 - ROADMAP.md v1.2 identity/icon item marked done; CHANGELOG Unreleased updated.
-  APP_VERSION left at 1.1 (unreleased polish).
+  APP_VERSION bumped to 1.2 for this release.
 
 3. VERIFICATION
 PASS: Source review of title / title_label / iconbitmap wiring.
