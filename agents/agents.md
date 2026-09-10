@@ -38,7 +38,8 @@ requirements-scaffolder.txt  # Pinned minimal dependency list (no lockfiles, no 
 projects.json                # User-editable list of {"name": ..., "path": ...} project shortcuts
 last_project.json            # Persists last-selected project path as {"path": "..."}
 Run-Agent-Scaffolder.bat     # Windows launcher: sets PATH for nvm/node, invokes pinned python.exe
-mstscax_13417.ico            # App icon asset
+icon/                       # Product icon: Agent.Scaffolder.ico (wired via iconbitmap)
+                             # Settings + main window; missing file keeps default Tk icon
 ```
 
 **Rules:**

@@ -1,0 +1,33 @@
+AGENT SCAFFOLDER — WINDOW IDENTITY AND PRODUCT ICON
+Date: 10 September 2026
+Report: notes_005.txt
+Predecessor: notes_004.txt (v1.1 live verification)
+Author role: Feature development and UI/UX specialist
+
+1. PURPOSE
+Close the ROADMAP v1.2 item on window identity and ship a rights-cleared
+product icon (replacing the previous uncleared mstscax extract).
+
+2. CHANGES
+- agent_scaffolder.py: main-window title_label text changed from
+  "Project Agent Generator" to "Agent Scaffolder". OS title remains
+  f"Agent Scaffolder v{APP_VERSION}" — product name now matches; version stays
+  only in the title bar.
+- Product icon: icon/Agent.Scaffolder.ico (rights-cleared, maintainer-confirmed).
+  ScaffoldingApp._apply_window_icon() and SettingsWindow load it via iconbitmap,
+  with a 200ms delayed re-apply so CustomTkinter does not wipe it after first paint.
+  Missing file falls back to the default Tk/Python icon without blocking launch.
+- Removed icon/mstscax_13417.ico from the tree (not a cleared product asset).
+- icon/README.md documents Agent.Scaffolder.ico as the product icon.
+- agents/agents.md file-structure block updated accordingly.
+- ROADMAP.md v1.2 identity/icon item marked done; CHANGELOG Unreleased updated.
+  APP_VERSION bumped to 1.2 for this release.
+
+3. VERIFICATION
+PASS: Source review of title / title_label / iconbitmap wiring.
+PASS (maintainer, 2026-09-10): Windows relaunch confirmed the title-bar /
+taskbar icon shows Agent.Scaffolder.ico correctly.
+
+4. FOLLOW-UP
+If the icon asset is renamed or moved, update _apply_window_icon paths,
+SettingsWindow, icon/README.md, and this note together.

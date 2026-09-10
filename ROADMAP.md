@@ -1,7 +1,6 @@
 # ROADMAP.md — Agent Scaffolder
 
-Current version: **1.1** (released 2026-09-10, live-verified — see
-`notes/notes_004.txt`). This roadmap sequences the work identified in the maintainer's
+Current version: **1.2** (released 2026-09-10 — see `CHANGELOG.md` and `notes/notes_005.txt`; 1.1 live verification remains in `notes/notes_004.txt`). This roadmap sequences the work identified in the maintainer's
 own review notes (`notes/notes_001.txt`, `notes/notes_002.txt`) plus ideas for turning
 this from a working utility into a more capable desktop application. Nothing here is
 committed until picked up in a session — treat it as a backlog. Record actual releases
@@ -82,8 +81,12 @@ memory and only hit disk after all three requests succeed, which resolves the re
       on 2026-09-10 (customtkinter 5.2.2) showed clicking the already-selected `Other...`
       *does* refire `on_project_selected` and reopens the folder picker as expected. No
       fix needed here; removed from the backlog.
-- [ ] Resolve window identity: one product name across the OS title bar and in-window
+- [x] Resolve window identity: one product name across the OS title bar and in-window
       heading; wire up a rights-cleared icon or stop documenting one that isn't shipped.
+      Done 2026-09-10: in-window heading is now "Agent Scaffolder" (version stays in the
+      OS title only). Product icon is `icon/Agent.Scaffolder.ico`, wired via `iconbitmap`
+      on ScaffoldingApp and SettingsWindow (200ms re-apply for CTk). `mstscax_13417.ico`
+      removed. Maintainer confirmed title-bar icon after relaunch; see `notes/notes_005.txt`.
 - [ ] `status_label` `justify="left"`; small copy pass on status strings and Settings.
 - [ ] Align docs to the real `notes/notes_NNN.txt` naming (README, CHANGELOG,
       CONTRIBUTING currently say `notes1.txt` / `notesN.txt`).
