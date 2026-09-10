@@ -17,7 +17,7 @@ import anthropic
 import keyring
 from tkinter import filedialog, messagebox
 
-APP_VERSION = "1.2"
+APP_VERSION = "1.3"
 
 # Credential Manager service for Anthropic API key (never store keys in files)
 SERVICE_NAME = "AgentScaffolderApp"
@@ -281,6 +281,8 @@ class ScaffoldingApp(ctk.CTk):
         self.target_dir = None
         self.settings_window = None
         self._suppress_project_event = False
+        self._job_running = False
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
 
         self.title_label = ctk.CTkLabel(
             self, text="Agent Scaffolder", font=("Segoe UI", 18, "bold")
@@ -448,6 +450,8 @@ class ScaffoldingApp(ctk.CTk):
             self.settings_window.focus()
 
     def start_generation(self):
+        if self._job_running:
+            return
         if not self.has_api_key():
             self.open_settings()
             return
@@ -458,6 +462,8 @@ class ScaffoldingApp(ctk.CTk):
         # target_dir or project_menu again once it starts.
         target_dir = self.target_dir
         output_dir = self._output_folder_for_selection()
+        self._job_running = True
+        self.configure(cursor="wait")
         self.generate_btn.configure(state="disabled")
         self.settings_btn.configure(state="disabled")
         self.project_menu.configure(state="disabled")
@@ -465,6 +471,18 @@ class ScaffoldingApp(ctk.CTk):
         threading.Thread(
             target=self.run_scaffolding, args=(target_dir, output_dir), daemon=True
         ).start()
+
+    def _on_close(self):
+        if self._job_running:
+            proceed = messagebox.askyesno(
+                "Generation in progress",
+                "A generation is still running. Closing now will abandon it and may "
+                "leave a temporary Repomix file behind. Close anyway?",
+                icon="warning",
+            )
+            if not proceed:
+                return
+        self.destroy()
 
     def update_status(self, text):
         self.after(0, lambda: self.status_label.configure(text=text))
@@ -618,6 +636,8 @@ class ScaffoldingApp(ctk.CTk):
             self.after(0, self.reset_buttons)
 
     def reset_buttons(self):
+        self._job_running = False
+        self.configure(cursor="")
         self.settings_btn.configure(state="normal")
         self.project_menu.configure(state="normal")
         # Restore button enablement without clobbering the success/error text

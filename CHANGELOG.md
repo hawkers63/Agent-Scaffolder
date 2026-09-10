@@ -4,6 +4,18 @@
 
 Nothing yet.
 
+## 1.3 — 2026-09-11
+
+Batch-1 UX polish (session testing runs live verification only every 6th release —
+see `notes/notes_006.txt`).
+
+- **`_job_running` guard + busy cursor:** `start_generation` now no-ops if a job is
+  already running (defensive; buttons already prevented this in practice), and the
+  window cursor switches to the Windows wait cursor for the duration of a generation.
+- **Close-during-job confirmation:** closing the window while a generation is in
+  flight now asks for confirmation first, warning that it will abandon the job and
+  may leave a temporary Repomix file behind, instead of silently killing it.
+
 ## 1.2 — 2026-09-10
 
 Window identity, product icon, model picker, and repo professionalism pass on top of 1.1.

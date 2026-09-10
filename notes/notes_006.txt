@@ -1,0 +1,45 @@
+AGENT SCAFFOLDER — JOB GUARD, BUSY CURSOR, CLOSE-DURING-JOB
+Date: 11 September 2026
+Report: notes_006.txt
+Predecessor: notes_005.txt (v1.2 window identity/icon)
+Author role: Feature development and UI/UX specialist
+
+1. PURPOSE
+Close the ROADMAP v1.2 item on the `_job_running` guard, busy cursor, and
+close-during-job behaviour. First release of the batched testing cadence
+adopted 2026-09-11 (see ROADMAP.md intro): versions 1.3-1.7 ship on source
+review / compile checks only, with a live end-to-end test reserved for the
+1.8 checkpoint, to keep real Anthropic/Repomix API cost down.
+
+2. CHANGES
+- agent_scaffolder.py: added `self._job_running` (False by default, True for
+  the duration of a generation, reset in `reset_buttons`).
+- `start_generation` now returns immediately if `_job_running` is already
+  True (defensive - button disablement already prevented double-clicks in
+  practice, but this guards any other future call path).
+- Window cursor set to "wait" for the duration of a generation (`self.configure
+  (cursor="wait")` in `start_generation`, cleared to "" in `reset_buttons`).
+- `ScaffoldingApp.__init__` now sets `self.protocol("WM_DELETE_WINDOW",
+  self._on_close)`. `_on_close` asks for confirmation via
+  `messagebox.askyesno` only while `_job_running` is True, warning that
+  closing will abandon the job and may leave a temporary Repomix XML file
+  behind (the worker thread is a daemon thread killed at interpreter exit,
+  so its `finally` cleanup does not get to run if the process exits first).
+  Declining leaves the window open; confirming calls `self.destroy()` as
+  before.
+- APP_VERSION bumped to 1.3. CHANGELOG.md and ROADMAP.md updated.
+
+3. VERIFICATION
+PASS: `python -m py_compile agent_scaffolder.py`.
+PASS: Source review of the guard/cursor/close-handler wiring against the
+existing `refresh_ui_state` / `reset_buttons` flow - no path re-enables
+`generate_btn` without also clearing `_job_running` and the cursor.
+NOT DONE (deliberately, per the batched testing cadence): a live GUI pass
+confirming the wait cursor renders and the close-confirmation dialog appears
+correctly on Windows. Deferred to the 1.8 live-test checkpoint.
+
+4. FOLLOW-UP
+The close-during-job dialog does not attempt to kill the in-flight Repomix
+subprocess or Anthropic request - see the 1.4 cancel-button work, which
+adds the actual termination path. Until 1.4, "close anyway" just abandons
+the daemon thread at process exit.

@@ -18,14 +18,21 @@ and are now the dev-instructions the maintainer follows when working on the tool
 itself (see `CONTRIBUTING.md`).
 
 ## Current version
-**1.1** — bumped 2026-09-10 (`APP_VERSION` in `agent_scaffolder.py:12`, `README.md`,
-`CHANGELOG.md`). Live-verified the same day: real GUI smoke test plus a real
-end-to-end generation run against this repo (see session log below and
-`notes/notes_004.txt`). **Not yet tagged/pushed in git** — commit/tag is a separate
-explicit action per this repo's workflow (see the pre-existing uncommitted state
-noted below, which predates this session and is still unstaged). The last git tag
-is still `v1.0` (commit `15fc633`). Bump `APP_VERSION` + `CHANGELOG.md` + a new
-`notes/notes_NNN.txt` together whenever the next release lands.
+**1.3** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
+Verified by source review + `py_compile` only, per the batched testing cadence
+adopted this session (see "Testing cadence" below and `ROADMAP.md` intro): versions
+1.3-1.7 ship without a live Anthropic/Repomix run to keep real API cost down (a
+one-hour live-testing session cost ~$7), with a live end-to-end test reserved for
+the 1.8 checkpoint release. 1.1 and 1.2 were both live-verified and tagged
+(`notes/notes_004.txt`, `notes/notes_005.txt`); the last git tag is `v1.2`.
+
+## Testing cadence (adopted 2026-09-11)
+Real Anthropic API calls and real Repomix runs cost real money per execution.
+Going forward: five code-only releases (source review + compile check, no live
+call) then a 6th release dedicated to a live test pass and fixing whatever it
+finds, then repeat. Current batch: 1.3-1.7 code-only, 1.8 is the live-test/fix
+checkpoint. Don't skip the 1.8 checkpoint or extend the batch past 5 without
+asking — the whole point is keeping cost predictable.
 
 ## Architecture invariants — do not break these without an explicit request
 - Single-file app (`agent_scaffolder.py`). No module split.
@@ -61,8 +68,11 @@ Architecture/robustness (notes_001.txt):
 - `safe_folder_name` doesn't reject Windows reserved device names (CON, PRN, etc.).
 
 UI/UX (notes_002.txt):
-- No busy cursor, no `_job_running` guard against a second concurrent Generate, no
-  documented close-during-job behaviour.
+- Busy cursor, `_job_running` guard, and close-during-job confirmation —
+  **resolved 2026-09-11** in notes_006.txt (v1.3): wait cursor during generation,
+  `start_generation` no-ops if already running, `WM_DELETE_WINDOW` asks for
+  confirmation while a job is in flight. Note: this only confirms/abandons — it
+  doesn't kill the in-flight subprocess/request yet (see 1.4 cancel button below).
 - Window title ("Agent Scaffolder v1.1" as of the version bump) vs in-window heading
   ("Project Agent Generator") — **resolved 2026-09-10** in notes_005: heading is now
   "Agent Scaffolder". Product icon is `icon/Agent.Scaffolder.ico`, wired via `iconbitmap` on ScaffoldingApp and SettingsWindow (confirmed 2026-09-10). Uncleared `mstscax_13417.ico` removed.
@@ -175,3 +185,14 @@ design. Don't reintroduce them under a "polish" pass without confirming it's wan
   simulated clicks, minimize the terminal window in the *same* PowerShell call that
   performs the click (or immediately before screenshotting) rather than as a separate
   prior step, or clicks can land on the terminal instead of the intended target.
+- 2026-09-11: User flagged that live testing (real Repomix + Anthropic calls) hit
+  ~$7/hour and proposed a batched testing cadence to control cost going forward:
+  5 code-only releases (review/compile-check only) then a 6th dedicated to a live
+  test + fixes, repeating. Agreed, with the refinement that any single
+  architecturally-risky change gets flagged for an out-of-turn live check rather
+  than waiting for the batch boundary. Confirmed scope for this batch (1.3-1.7):
+  finish the remaining v1.2 UX-polish items, then pull two v1.3 feature items
+  (cancel button, single-file regeneration) to round out to five. Implemented 1.3
+  (`_job_running` guard, busy cursor, close-during-job confirmation) this session —
+  see `notes/notes_006.txt`. 1.8 is reserved as the live-test/fix checkpoint for
+  this batch; do not skip it.

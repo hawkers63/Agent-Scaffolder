@@ -1,10 +1,18 @@
 # ROADMAP.md — Agent Scaffolder
 
-Current version: **1.2** (released 2026-09-10 — see `CHANGELOG.md` and `notes/notes_005.txt`; 1.1 live verification remains in `notes/notes_004.txt`). This roadmap sequences the work identified in the maintainer's
-own review notes (`notes/notes_001.txt`, `notes/notes_002.txt`) plus ideas for turning
-this from a working utility into a more capable desktop application. Nothing here is
-committed until picked up in a session — treat it as a backlog. Record actual releases
-in `CHANGELOG.md` plus a new `notes/notes_NNN.txt`, and bump `APP_VERSION` alongside them.
+Current version: **1.3** (released 2026-09-11 — see `CHANGELOG.md` and
+`notes/notes_006.txt`; 1.2 icon/identity work remains in `notes/notes_005.txt`). This
+roadmap sequences the work identified in the maintainer's own review notes
+(`notes/notes_001.txt`, `notes/notes_002.txt`) plus ideas for turning this from a
+working utility into a more capable desktop application. Nothing here is committed
+until picked up in a session — treat it as a backlog. Record actual releases in
+`CHANGELOG.md` plus a new `notes/notes_NNN.txt`, and bump `APP_VERSION` alongside them.
+
+**Testing cadence (adopted 2026-09-11):** live end-to-end runs (real Repomix +
+real Anthropic API calls) cost real money, so they're batched — five code-only
+releases verified by source review / compile checks only, then a 6th release
+dedicated to a live test pass and fixing whatever it finds, then repeat. This batch
+is versions 1.3–1.7; the checkpoint live test and any resulting fix release is 1.8.
 
 ## v1.1 — Correctness & reliability (shipped)
 Both audits agree these are the changes that make current behaviour honest, before any
@@ -73,8 +81,12 @@ memory and only hit disk after all three requests succeed, which resolves the re
   updated to `/.repomix-context*.xml`.
 
 ## v1.2 — UX polish
-- [ ] Add a `_job_running` guard and busy cursor during generation; document (or handle)
-      close-during-job.
+- [x] Add a `_job_running` guard and busy cursor during generation; document (or handle)
+      close-during-job. **Shipped in 1.3** (2026-09-11): `start_generation` no-ops while
+      a job is already running, window cursor is "wait" during generation, and closing
+      the window mid-job now asks for confirmation (warns it will abandon the job and
+      may leave a temp Repomix file) instead of silently killing it. See
+      `notes/notes_006.txt`.
 - [x] ~~Fix `Other...` re-selection~~ — **not actually broken.** notes_002.txt's finding
       D was explicitly inferred without launching the GUI ("CTkOptionMenu typically does
       not fire command when the displayed value is selected again"). A live smoke test
