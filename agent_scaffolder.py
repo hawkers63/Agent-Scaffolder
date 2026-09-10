@@ -185,6 +185,13 @@ class SettingsWindow(ctk.CTkToplevel):
         self.title("Settings")
         self.geometry("400x340")
         self.grab_set()
+        icon_path = os.path.join(APP_DIR, "icon", "Agent.Scaffolder.ico")
+        if os.path.isfile(icon_path):
+            try:
+                self.iconbitmap(icon_path)
+                self.after(200, lambda p=icon_path: self.iconbitmap(p))
+            except Exception:
+                pass
 
         self.title_label = ctk.CTkLabel(self, text="API Configuration", font=("Segoe UI", 16, "bold"))
         self.title_label.pack(pady=(15, 10))
@@ -268,6 +275,7 @@ class ScaffoldingApp(ctk.CTk):
         super().__init__()
         self.title(f"Agent Scaffolder v{APP_VERSION}")
         self.geometry("520x340")
+        self._apply_window_icon()
 
         self.projects = load_projects()
         self.target_dir = None
@@ -310,6 +318,20 @@ class ScaffoldingApp(ctk.CTk):
 
         self._restore_last_selection()
         self.after(200, self.first_run_check)
+
+
+    def _apply_window_icon(self):
+        """Set the Windows title-bar / taskbar icon from icon/Agent.Scaffolder.ico."""
+        icon_path = os.path.join(APP_DIR, "icon", "Agent.Scaffolder.ico")
+        if not os.path.isfile(icon_path):
+            return
+        try:
+            self.iconbitmap(icon_path)
+            # CustomTkinter can replace the icon after the first paint on some builds.
+            self.after(200, lambda p=icon_path: self.iconbitmap(p))
+        except Exception:
+            # Icon failure must not block launch; default Tk icon remains.
+            pass
 
     def _restore_last_selection(self):
         last = load_last_project_path()

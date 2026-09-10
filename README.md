@@ -37,7 +37,7 @@ Hand-writing agent instructions for every codebase is slow and drifts out of dat
 | **Changelog** | Full notes in [CHANGELOG.md](CHANGELOG.md) |
 | **Tags** | [`v1.1`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.1) · [`v1.0`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.0) |
 
-**On `main` since v1.1 (not yet a new tagged release):** in-app generation model menu (Settings), proprietary `LICENSE` / copyright notices, and `projects.example.json`. See the **Unreleased** section in the changelog.
+**On `main` since v1.1 (not yet a new tagged release):** in-app generation model menu (Settings), proprietary LICENSE / copyright notices, `projects.example.json`, window identity + `Agent.Scaffolder.ico`. See the **Unreleased** section in the changelog.
 
 > Maintainers: when you cut a release, bump `APP_VERSION`, update this **Release** table, add a CHANGELOG entry, and tag (`vX.Y`). Prefer creating a matching GitHub Release so the badges and links stay honest.
 

@@ -1,8 +1,8 @@
 # Icon assets
 
-Agent Scaffolder does **not** currently set a custom window or taskbar icon.
-The app uses the default Tk/Python icon.
+Product window / taskbar icon: `Agent.Scaffolder.ico`.
 
-`mstscax_13417.ico` in this folder is **not** wired via `iconbitmap` / `iconphoto`
-and is **not** a cleared product icon. Do not document or ship it as the app
-branding until a rights-cleared replacement is provided and explicitly wired up.
+`ScaffoldingApp` and `SettingsWindow` load this file via `iconbitmap` when present
+(with a short delayed re-apply so CustomTkinter does not wipe it after first paint).
+
+If the file is missing, the app keeps the default Tk/Python icon and still launches.

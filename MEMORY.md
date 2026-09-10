@@ -65,8 +65,7 @@ UI/UX (notes_002.txt):
   documented close-during-job behaviour.
 - Window title ("Agent Scaffolder v1.1" as of the version bump) vs in-window heading
   ("Project Agent Generator") — **resolved 2026-09-10** in notes_005: heading is now
-  "Agent Scaffolder". `icon/mstscax_13417.ico` remains in-tree but is **not** wired via
-  `iconbitmap`/`iconphoto` and is not documented as a cleared product icon.
+  "Agent Scaffolder". Product icon is `icon/Agent.Scaffolder.ico`, wired via `iconbitmap` on ScaffoldingApp and SettingsWindow (confirmed 2026-09-10). Uncleared `mstscax_13417.ico` removed.
 - Docs inconsistently reference `notes/notes1.txt` / `notesN.txt` instead of the actual
   `notes_NNN.txt` naming.
 

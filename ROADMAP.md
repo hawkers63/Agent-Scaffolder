@@ -85,9 +85,9 @@ memory and only hit disk after all three requests succeed, which resolves the re
 - [x] Resolve window identity: one product name across the OS title bar and in-window
       heading; wire up a rights-cleared icon or stop documenting one that isn't shipped.
       Done 2026-09-10: in-window heading is now "Agent Scaffolder" (version stays in the
-      OS title only). No custom icon is wired — `icon/mstscax_13417.ico` is not treated
-      as a rights-cleared product asset and is not passed to `iconbitmap`/`iconphoto`.
-      Docs updated accordingly; see `notes/notes_005.txt`.
+      OS title only). Product icon is `icon/Agent.Scaffolder.ico`, wired via `iconbitmap`
+      on ScaffoldingApp and SettingsWindow (200ms re-apply for CTk). `mstscax_13417.ico`
+      removed. Maintainer confirmed title-bar icon after relaunch; see `notes/notes_005.txt`.
 - [ ] `status_label` `justify="left"`; small copy pass on status strings and Settings.
 - [ ] Align docs to the real `notes/notes_NNN.txt` naming (README, CHANGELOG,
       CONTRIBUTING currently say `notes1.txt` / `notesN.txt`).
