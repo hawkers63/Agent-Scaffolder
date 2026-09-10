@@ -1,0 +1,51 @@
+AGENT SCAFFOLDER — DOCS ALIGNMENT (notes_NNN.txt NAMING)
+Date: 11 September 2026
+Report: notes_009.txt
+Predecessor: notes_008.txt (v1.5 status_label/copy pass)
+Author role: Feature development and UI/UX specialist
+
+1. PURPOSE
+Ship the last v1.2-bucket ROADMAP item: align docs to the real
+`notes/notes_NNN.txt` naming instead of the stale `notes1.txt` / `notesN.txt`
+references left over from before the numbering convention was adopted.
+Fourth release of the batch-1 testing cadence (1.3-1.7 code-only, 1.8
+live-test checkpoint). This is a docs-only release; no changes to
+agent_scaffolder.py's behaviour.
+
+2. CHANGES
+- CONTRIBUTING.md step 4: "add the next `notes/notesN.txt`" -> "add the next
+  `notes/notes_NNN.txt` (zero-padded, e.g. `notes_009.txt`)".
+- CHANGELOG.md's 1.0 entry: "Detailed baseline review in `notes/notes1.txt`."
+  -> now names the real current file (`notes/notes_001.txt`) and notes it
+  was originally written as `notes1.txt`, later split into notes_001/002 and
+  renamed to the current convention - so the historical entry stays accurate
+  without pointing at a file that no longer exists.
+- README.md checked directly: it only ever referenced `notes/` generically
+  (`"See ... and notes/ for release scope and known limitations"`), never a
+  specific stale filename. No change needed there - the ROADMAP wording that
+  named README alongside CHANGELOG/CONTRIBUTING overstated its part in this;
+  corrected that in the ROADMAP checkbox note.
+- README's Release table/badge (still reading v1.2) deliberately left
+  untouched: its own maintainer note says it tracks *tagged* releases, and
+  1.3-1.6 aren't tagged/pushed yet in this repo (tagging remains an explicit
+  per-request action, not automatic). Bumping the README's displayed version
+  ahead of an actual tag would make its links dishonest. Will be updated in
+  one pass whenever this batch is tagged.
+- APP_VERSION bumped to 1.6 (source unchanged otherwise, but this project's
+  convention is one version per shipped roadmap item, docs items included).
+  CHANGELOG.md and ROADMAP.md updated; ROADMAP's v1.2 section header now
+  reads "(shipped, spread across releases 1.2-1.6)" since all three of its
+  items are now checked off.
+
+3. VERIFICATION
+PASS: `python -m py_compile agent_scaffolder.py` (no .py changes, ran anyway
+for consistency with every other release in this batch).
+PASS: repo-wide grep for `notes1\.txt|notesN\.txt|notes_NNN` to confirm no
+remaining stale reference outside of this note's own explanation of the
+rename history and MEMORY.md's already-accurate description of past state.
+NOT DONE: nothing live to verify here - pure documentation change.
+
+4. FOLLOW-UP
+When this batch (1.3-1.7) is eventually tagged/pushed, update README's
+Release table/badge and Tags list to the final tagged version in the same
+pass, per its own maintainer note.

@@ -80,7 +80,7 @@ memory and only hit disk after all three requests succeed, which resolves the re
   match the unique-per-run naming introduced in v1.1 (`.repomix-context-<hex>.xml`) —
   updated to `/.repomix-context*.xml`.
 
-## v1.2 — UX polish
+## v1.2 — UX polish (shipped, spread across releases 1.2–1.6)
 - [x] Add a `_job_running` guard and busy cursor during generation; document (or handle)
       close-during-job. **Shipped in 1.3** (2026-09-11): `start_generation` no-ops while
       a job is already running, window cursor is "wait" during generation, and closing
@@ -101,8 +101,12 @@ memory and only hit disk after all three requests succeed, which resolves the re
       removed. Maintainer confirmed title-bar icon after relaunch; see `notes/notes_005.txt`.
 - [x] `status_label` `justify="left"`; small copy pass on status strings and Settings.
       **Shipped in 1.5** (2026-09-11). See `notes/notes_008.txt`.
-- [ ] Align docs to the real `notes/notes_NNN.txt` naming (README, CHANGELOG,
-      CONTRIBUTING currently say `notes1.txt` / `notesN.txt`).
+- [x] Align docs to the real `notes/notes_NNN.txt` naming. **Shipped in 1.6**
+      (2026-09-11): fixed `CONTRIBUTING.md` (`notesN.txt` -> `notes_NNN.txt`) and
+      this changelog's 1.0 entry (`notes1.txt` -> `notes_001.txt`). README
+      already referenced `notes/` generically, not a stale filename, so it
+      needed no change — the original finding overstated README's part in
+      this. See `notes/notes_009.txt`.
 
 ## v1.3 — Feature expansion (needs a product decision first — see "Later" below)
 - [ ] Lightweight in-app project manager (add/edit/remove `projects.json` entries) as

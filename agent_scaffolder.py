@@ -17,7 +17,7 @@ import anthropic
 import keyring
 from tkinter import filedialog, messagebox
 
-APP_VERSION = "1.5"
+APP_VERSION = "1.6"
 
 # Credential Manager service for Anthropic API key (never store keys in files)
 SERVICE_NAME = "AgentScaffolderApp"

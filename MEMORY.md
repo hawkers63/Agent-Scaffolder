@@ -18,7 +18,7 @@ and are now the dev-instructions the maintainer follows when working on the tool
 itself (see `CONTRIBUTING.md`).
 
 ## Current version
-**1.5** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
+**1.6** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
 Verified by source review + `py_compile` only, per the batched testing cadence
 adopted this session (see "Testing cadence" below and `ROADMAP.md` intro): versions
 1.3-1.7 ship without a live Anthropic/Repomix run to keep real API cost down (a
@@ -80,7 +80,9 @@ UI/UX (notes_002.txt):
   ("Project Agent Generator") — **resolved 2026-09-10** in notes_005: heading is now
   "Agent Scaffolder". Product icon is `icon/Agent.Scaffolder.ico`, wired via `iconbitmap` on ScaffoldingApp and SettingsWindow (confirmed 2026-09-10). Uncleared `mstscax_13417.ico` removed.
 - Docs inconsistently reference `notes/notes1.txt` / `notesN.txt` instead of the actual
-  `notes_NNN.txt` naming.
+  `notes_NNN.txt` naming — **resolved 2026-09-11** in notes_009.txt (v1.6):
+  `CONTRIBUTING.md` and `CHANGELOG.md`'s 1.0 entry fixed. README only ever referenced
+  `notes/` generically and needed no change.
 
 ## Model selection (added 2026-09-10, explicit user request)
 Settings has a "Generation model:" picker (Haiku 4.5 / Sonnet 5 / Opus 5, live pricing
@@ -205,5 +207,8 @@ design. Don't reintroduce them under a "polish" pass without confirming it's wan
   wrapper, not a grandchild process. Implemented 1.5 (`status_label
   justify="left"`, copy pass on status strings + Settings heading + env-override
   note + close-during-job dialog) — see `notes/notes_008.txt`. This closes out
-  the ROADMAP v1.2 section entirely. 1.8 is reserved as the live-test/fix
-  checkpoint for this batch; do not skip it.
+  the ROADMAP v1.2 section entirely. Implemented 1.6 (docs-only: fixed stale
+  `notes1.txt`/`notesN.txt` references in CONTRIBUTING.md and CHANGELOG.md;
+  left README's Release table at v1.2 deliberately, since it tracks tagged
+  releases and 1.3-1.6 aren't tagged yet) — see `notes/notes_009.txt`. 1.8 is
+  reserved as the live-test/fix checkpoint for this batch; do not skip it.

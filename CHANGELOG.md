@@ -4,6 +4,20 @@
 
 Nothing yet.
 
+## 1.6 — 2026-09-11
+
+Batch-1 docs alignment (see `notes/notes_009.txt`).
+
+- Fixed stale `notes/notesN.txt` reference in `CONTRIBUTING.md` — now says
+  `notes/notes_NNN.txt` with an example filename.
+- Fixed stale `notes/notes1.txt` reference in this changelog's 1.0 entry —
+  now points at `notes/notes_001.txt` with a note on the rename history.
+  README already referenced `notes/` generically and needed no change.
+- The README **Release** table/badge is intentionally left at v1.2 — per its
+  own maintainer note, it tracks tagged releases, and 1.3–1.6 aren't tagged
+  yet (tagging/pushing remains an explicit per-request action in this repo).
+  It will be updated in one pass when this batch is tagged.
+
 ## 1.5 — 2026-09-11
 
 Batch-1 UX polish, copy pass (see `notes/notes_008.txt`).
@@ -103,6 +117,8 @@ Initial versioned baseline of the existing application.
 - Explicit version displayed in the window title.
 - Checkout-relative launcher with Python launcher/PATH fallback.
 - Ignore rules, line-ending policy, setup and contribution documents, Windows syntax/import CI and pull-request template.
-- Detailed baseline review in `notes/notes1.txt`.
+- Detailed baseline review in `notes/notes_001.txt` (originally written as
+  `notes1.txt`, later split into `notes_001.txt` and `notes_002.txt` and
+  renamed to the current `notes_NNN.txt` convention).
 
 The existing generation behaviour and documented limitations are retained. This release does not claim a live API integration test or complete GUI validation.
