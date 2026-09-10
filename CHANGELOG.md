@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+Post-`v1.1` changes on `main` that are not yet a new tagged release:
+
+- **Settings → Generation model** dropdown (Claude Haiku 4.5, Sonnet 5, Opus 5) with prices in the label; choice saved to gitignored `model_choice.json`. Resolution order: `AGENT_SCAFFOLDER_MODEL` env override → Settings choice → `DEFAULT_MODEL`.
+- Launcher no longer forces `AGENT_SCAFFOLDER_MODEL` in `Run-Agent-Scaffolder.bat` (superseded by the picker).
+- Proprietary **LICENSE** (All Rights Reserved, hawkers63, 2026), copyright header on `agent_scaffolder.py`, stronger README copyright section, and `projects.example.json` template.
+- `.gitignore` extended for `config.json` / temp / backup patterns; Repomix ignore pattern updated to `/.repomix-context*.xml`.
+
 ## 1.1 — 2026-09-10
 
 Correctness and reliability pass over the 1.0 baseline, driven by the findings in
