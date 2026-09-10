@@ -1,0 +1,156 @@
+AGENT SCAFFOLDER — VERSION 1.0 BASELINE REPORT
+Date: 10 September 2026
+Report: notes1.txt
+
+1. PURPOSE AND SCOPE
+Establish the current application as version 1.0, prepare the GitHub repository,
+and record a detailed review under the enhancement-agent instructions.
+This application produces Markdown instructions for AI assistants. It does not
+create an executable autonomous Python agent. Existing generation behaviour is
+retained; the release work is versioning, launcher portability and repository
+preparation, rather than a feature redesign.
+
+2. INSTRUCTIONS AND ARCHITECTURE
+Read agents/enhancement_agent.md and agents/agents.md. Retain the single-file
+CustomTkinter application, pack-based layout, Segoe UI typography, compact
+windows, keyring credential storage and background daemon-thread generation.
+The normal output contract remains Desktop/Agent Outputs/<project>.
+No dedicated active task-tracking tool was available; used the standalone
+workflow with an announced scope, implementation and focused verification.
+
+3. EXISTING CAPABILITIES
+- Project shortcuts loaded from projects.json, with built-in fallback entries.
+- Other-directory selection and last-project restoration.
+- Singleton modal Settings window for a masked Anthropic API key.
+- Credential storage using AgentScaffolderApp / AnthropicAPIKey via keyring.
+- Generate button availability based on key presence and directory validity.
+- Background Repomix invocation with selected-project working directory.
+- Three sequential model requests: agents.md, bug_hunter.md and enhancement_agent.md.
+- Text status updates, output-folder opening and temporary XML cleanup attempts.
+
+4. RELEASE CHANGES
+- Add APP_VERSION = "1.0" beside the module constants and use it in the main title.
+- Make the batch launcher locate the application relative to its own directory.
+- Add .gitignore for Python caches, environments, builds, editor files, local
+  projects.json/last_project.json, credentials and packaged repository context.
+- Add .gitattributes with LF source/documentation and CRLF batch files.
+- Expand README with installation, operation, model override, output behaviour,
+  local configuration, source transmission and verification guidance.
+- Add CHANGELOG, CONTRIBUTING, a pull-request template and Windows Python 3.11
+  syntax/import CI. Runtime requirements remain unchanged.
+- Retain the supplied agents and icon asset. The icon's provenance is not
+  established by this review; no licence is invented or granted for it or code.
+- Add this first numbered report. No earlier notes were present.
+
+5. FINDINGS AND TARGETED FOLLOW-UP RECOMMENDATIONS
+These findings are not implemented in this baseline.
+
+HIGH — Exceptions before the worker's try/finally can leave controls disabled.
+Location: ScaffoldingApp.run_scaffolding, before its first try statement.
+Keyring lookup, output-directory calculation, environment setup and Anthropic
+client creation execute outside the cleanup/error-handling boundary. An
+exception there bypasses reset_buttons and the standard error dialog.
+Recommendation: capture the UI selection before starting the thread, then put
+all worker setup and I/O under one try/except/finally. Test keyring, client
+initialisation and output-path failures; verify one reset is always scheduled.
+
+HIGH — Structurally invalid JSON can crash startup.
+Locations: load_projects, load_last_project_path, ensure_projects_file and
+_restore_last_selection. A non-empty list is accepted without validating each
+entry, but later code requires dictionaries containing string name/path fields.
+A last-project dictionary may contain a truthy non-string path. Initial seeding
+writes outside load_projects' try block, so an unwritable directory can raise.
+Recommendation: validate object shapes and non-empty strings, reject duplicate
+or reserved Other... names, and catch seeding I/O failures. Test malformed JSON,
+[{}], non-dictionary entries, non-string paths and write-denied configuration.
+
+MEDIUM — A widget is read from the background thread.
+Location: run_scaffolding -> _output_folder_for_selection -> project_menu.get().
+Although most updates use after(), output naming consults a live Tk widget in
+the worker. This violates the intended UI-thread boundary and can fail during
+shutdown. Recommendation: capture target/output paths on the main thread and
+pass immutable values into the worker. Test with a menu stub that rejects reads
+outside the initiating thread.
+
+MEDIUM — Output replacement can leave mixed or incomplete documents.
+Location: run_scaffolding, response processing and writes inside the agent loop.
+Existing files are overwritten one at a time, with no backup or batch commit.
+A later request failure leaves some files new and others old. content[0].text
+assumes a non-empty text response; no stop_reason check rejects truncation.
+Recommendation: validate response blocks and completion reason, stage all three
+results, then use an explicit replacement/backup policy. Test empty, non-text,
+truncated and second-request-failure responses, preserving previous outputs.
+
+MEDIUM — Shared temporary filename and output-name collisions.
+Locations: .repomix-context.xml and _output_folder_for_selection.
+Two app instances share the same XML path and may read or delete each other's
+context. Different Other paths with the same basename share an output folder.
+safe_folder_name also does not reject Windows reserved device names.
+Recommendation: unique per-run temporary XML under APP_DIR, cleaned in finally;
+validate reserved names and provide a stable identity or explicit collision UX
+for output directories. Preserve the Desktop output-root contract.
+
+MEDIUM — Credential-store failures escape UI handlers.
+Locations: has_api_key, SettingsWindow.__init__ and save_settings.
+Backend errors can abort refresh or Settings operations without a clear dialog.
+Recommendation: route failures through explicit status/error handling, retain
+the entered value while saving fails, and do not introduce plaintext fallback.
+
+MEDIUM — API compatibility and reproducibility remain unverified.
+The source default is claude-sonnet-5; this is an observed string, not a verified
+claim about provider model availability. Dependencies have minimum bounds,
+not pinned versions. The request assumes a model supporting the existing
+thinking parameter and a first text block. No live request was made.
+Recommendation: test the selected model with the intended SDK version in a
+separate authorised integration run and record dependency versions. Do not
+silently change model choice, token limits or prompt behaviour.
+
+LOW — Final status is immediately replaced by reset_buttons.
+Location: reset_buttons -> refresh_ui_state. Success/error text is replaced by
+Ready to generate after the worker completes. Recommendation: separate control
+refresh from operation-result status, retaining the last result until the next
+user action. Test the queued success and error callback order.
+
+LOW — Subprocess and shutdown lifecycle need bounded behaviour.
+Repomix has no timeout and no cancellation flow. Closing the app stops a daemon
+worker and can leave temporary or partially written files. Recommendation:
+introduce a bounded subprocess policy and a documented close-during-job flow;
+keep all long-running operations off the UI thread.
+
+6. PRIORITY ORDER
+First: worker-wide exception handling, UI-thread snapshot and configuration
+validation. Next: response validation, safe staged output and unique temporary
+files. Then: keyring failure UX, persistent final status and job shutdown.
+Implement each as a small change with focused failure-path tests. No framework
+migration or module split is needed.
+
+7. VERIFICATION AND LIMITS
+Verification results will be appended below before committing this release.
+No paid Anthropic request, live credential read/write, full visual GUI check,
+or end-to-end Repomix generation is included in the baseline checks.
+The CI workflow checks syntax and imports; it is not a functional GUI suite.
+
+8. GITHUB PUBLICATION
+The remote initially contained only README.md at commit
+33929be9ec7a260a933dcd2e4716eeeb8d4d221f on main. Preserve that history,
+review the complete staged tree, commit the baseline and create annotated tag
+v1.0. Publish main and v1.0 without force, then verify remote commit/tag IDs.
+Normal Windows Git credentials are available outside the sandbox. GitHub CLI
+has no authenticated session, so no separate GitHub Release page is promised.
+Publication outcome is reported in the accompanying completion message.
+
+9. COMPLETED LOCAL VERIFICATION
+PASS: Python 3.11.1 compilation and application import.
+PASS: APP_VERSION equals 1.0 and the title references the constant.
+PASS: safe_folder_name punctuation handling and empty-name fallback.
+PASS: isolated temporary configuration seeding is idempotent; malformed JSON
+falls back; the saved-path round trip succeeds. Existing local JSON untouched.
+PASS: launcher structure uses its own directory, py -3.11 when available and
+python on PATH otherwise. Full interactive batch/GUI launch was not performed.
+PASS: git check-ignore excludes projects.json, last_project.json, Python cache
+and .repomix-context.xml. git diff --check reports no whitespace errors.
+Installed verification dependencies: customtkinter 5.2.2, anthropic 0.92.0,
+keyring 25.7.0. No dependencies were installed or upgraded for these checks.
+The model, token budget, prompts, keyring identifiers, project defaults and
+output-location logic were not changed. Functional follow-ups in section 5
+remain pending. GitHub-hosted CI outcome requires checking after publication.

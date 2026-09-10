@@ -1,0 +1,26 @@
+name: Python checks
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements-scaffolder.txt
+      - name: Install dependencies
+        run: python -m pip install -r requirements-scaffolder.txt
+      - name: Check syntax
+        run: python -m compileall -q agent_scaffolder.py
+      - name: Check imports
+        run: python -c "import agent_scaffolder; print(agent_scaffolder.APP_VERSION)"
