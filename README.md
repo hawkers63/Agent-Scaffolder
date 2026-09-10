@@ -67,4 +67,12 @@ python -c "import agent_scaffolder; print(agent_scaffolder.APP_VERSION)"
 
 GitHub Actions runs syntax and import checks on Windows with Python 3.11. These checks do not launch the GUI, access stored credentials, invoke Repomix or make paid API requests.
 
-Keep the single-file CustomTkinter architecture and follow `agents/enhancement_agent.md` for feature/UI work. See `CONTRIBUTING.md`, `CHANGELOG.md` and `notes/notes1.txt` for release scope and known limitations. No software licence is granted by this repository; that choice remains with the owner.
+Keep the single-file CustomTkinter architecture and follow `agents/enhancement_agent.md` for feature/UI work. See `CONTRIBUTING.md`, `CHANGELOG.md` and `notes/notes1.txt` for release scope and known limitations.
+
+## Copyright & License
+
+Copyright (c) 2026 hawkers63. All rights reserved.
+
+This project is proprietary software. No open-source or permissive licence is granted. Without prior written consent from hawkers63, you may not copy, reproduce, redistribute, modify, reverse-engineer, or use this software for commercial purposes.
+
+See [LICENSE](LICENSE) for the full All Rights Reserved notice.

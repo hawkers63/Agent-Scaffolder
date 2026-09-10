@@ -28,3 +28,11 @@ Thumbs.db
 Desktop.ini
 .DS_Store
 *.log
+
+# Extra local / temp / config patterns
+config.json
+config.json.tmp
+*.tmp
+*.bak
+ehthumbs.db
+desktop.ini

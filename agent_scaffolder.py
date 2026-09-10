@@ -1,3 +1,11 @@
+"""
+Copyright (c) 2026 hawkers63. All rights reserved.
+
+This file is proprietary to hawkers63. Unauthorised copying, reproduction,
+redistribution, modification, reverse-engineering, or commercial use of this
+software, in whole or in part, is strictly prohibited without prior written
+consent from the copyright holder. See LICENSE in the project root.
+"""
 import json
 import os
 import shutil
