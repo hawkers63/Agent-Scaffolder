@@ -1,0 +1,109 @@
+AGENT SCAFFOLDER — VERSION 1.1 CORRECTNESS AND RELIABILITY IMPLEMENTATION
+Date: 10 September 2026
+Report: notes_003.txt
+Predecessors: notes_001.txt (baseline architecture/release findings),
+notes_002.txt (UI/UX and feature-surface review)
+
+1. PURPOSE AND SCOPE
+Implement the seven HIGH-priority items both predecessor notes independently flagged
+as making current behaviour honest, tracked as the v1.1 section of the new
+ROADMAP.md. This is a correctness/reliability pass only: no new widgets, no new
+features, no change to the single-file CustomTkinter architecture, generation
+prompts, model choice or the Desktop output contract. APP_VERSION was not bumped;
+this remains an implementation against the 1.0 baseline pending a release decision.
+
+2. FILES TOUCHED
+agent_scaffolder.py only. ROADMAP.md and MEMORY.md (new this session) updated to
+mark the v1.1 checklist done. No changes to projects.json, last_project.json,
+requirements-scaffolder.txt, the launcher, README, CHANGELOG or agents/*.md.
+
+3. CHANGES IMPLEMENTED
+a) Worker-wide exception handling (notes_001 HIGH #1).
+   run_scaffolding now takes target_dir and output_dir as parameters and puts the
+   keyring read, Anthropic client construction, and output-dir creation inside the
+   same try/finally that already wrapped Repomix and the model calls. A missing API
+   key at run time raises a new ScaffoldingError caught alongside the other
+   exception types; reset_buttons is always scheduled via finally.
+
+b) JSON entry validation (notes_001 HIGH #2).
+   Added _valid_project_entries(): rejects non-dict entries, non-string or empty
+   name/path, the reserved "Other..." name, and duplicate names. load_projects()
+   falls back to DEFAULT_PROJECTS only when no entries survive validation, rather
+   than trusting any non-empty list. load_last_project_path() now requires the
+   "path" value to be a non-empty string, not just truthy. ensure_projects_file()
+   seeding is now wrapped in try/except OSError so an unwritable directory at first
+   launch degrades to in-memory defaults instead of raising during import-time
+   module use.
+
+c) UI-thread snapshot (notes_001 MEDIUM, notes_002 MEDIUM).
+   start_generation() now reads self.target_dir and calls
+   _output_folder_for_selection() itself, before disabling controls, and passes both
+   as plain arguments into the worker thread. run_scaffolding() no longer touches
+   self.target_dir or project_menu.get() at all.
+
+d) Staged writes with response validation (notes_001 MEDIUM).
+   Added _extract_text_response(), which rejects a response with stop_reason
+   "max_tokens" (truncation) or with no non-empty text block, raising
+   ScaffoldingError with the offending file name. The three model responses are
+   collected into a dict before any file is written; the write loop runs only after
+   all three requests succeed. A failure at any point during generation now leaves
+   the previous output files completely untouched, rather than a partial mix of new
+   and old files.
+
+e) Unique temp XML path (notes_001 MEDIUM).
+   Replaced the fixed ".repomix-context.xml" name with
+   f".repomix-context-{uuid.uuid4().hex}.xml" under APP_DIR, generated fresh per
+   run. Two concurrent app instances can no longer read or delete each other's
+   Repomix context.
+
+f) Guarded keyring and no auto-reopen loop (notes_001 MEDIUM, notes_002 HIGH).
+   SettingsWindow now wraps both the initial keyring.get_password() read and the
+   save_settings() get/set/delete calls in try/except, showing a
+   messagebox.showerror on failure instead of crashing the UI thread. On a save
+   failure the window is no longer destroyed and the entered value is retained. The
+   separate refresh_key_state() method (which unconditionally reopened Settings
+   whenever the key was missing after any save, including a deliberate clear) was
+   removed; SettingsWindow's on_saved callback is now refresh_ui_state directly.
+   Automatic opening of Settings is now solely first_run_check() at startup and the
+   existing "Generate without a key" guard in start_generation() — a deliberate
+   empty save no longer immediately reopens the dialog.
+
+g) Status retention (notes_001 LOW, notes_002 HIGH).
+   refresh_ui_state() takes a new update_status_text=True parameter; button
+   enablement is still always recalculated, but the status line is only rewritten
+   when the caller asks for it. reset_buttons() now calls
+   refresh_ui_state(update_status_text=False), so the terminal success or error
+   message posted by run_scaffolding survives until the next user action (project
+   change, Settings save, or a new Generate click), instead of being replaced by
+   "Ready to generate" the instant the job finishes.
+
+4. NOT DONE IN THIS PASS
+Deliberately left for a later increment, per ROADMAP.md v1.2/v1.3: reserved Windows
+device names in safe_folder_name; a documented busy-cursor/_job_running guard;
+Other...-reselection; window title/icon identity; status_label justify; dependency
+pinning; a live end-to-end model/Repomix verification run. None of these were
+regressed by this pass.
+
+5. VERIFICATION AND LIMITS
+PASS: python -m compileall -q agent_scaffolder.py.
+PASS: python -c "import agent_scaffolder" succeeds; APP_VERSION still reads "1.0".
+PASS: Standalone smoke tests (not part of any test suite, run ad hoc against the
+imported module) covering:
+  - _valid_project_entries against a mixed list (valid entry, empty dict, non-string
+    name, None path, blank name, duplicate name, reserved "Other..." name) returns
+    only the one well-formed entry.
+  - load_last_project_path against a JSON file with a non-string "path" value
+    returns None; against a valid string path returns that path.
+  - _extract_text_response raises ScaffoldingError for a stop_reason of "max_tokens"
+    and for an empty content list; returns stripped text for a normal response.
+NOT RUN: Windows GUI launch, live keyring read/write (including the guarded-failure
+and empty-save-no-reopen paths), live Repomix invocation, live Anthropic API call
+against MODEL, concurrent-instance temp-file collision test, full first-run and
+Settings interaction flows. These require a manual Windows pass with a real API key
+before this is treated as release-verified.
+
+6. NEXT NOTE
+The next incremental file is notes_004.txt. Before tagging a 1.1 release: bump
+APP_VERSION, add a CHANGELOG.md entry, and record the manual Windows verification
+listed under "NOT RUN" above (or explicitly disclose which of those checks were
+skipped, per CONTRIBUTING.md).

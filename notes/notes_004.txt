@@ -1,0 +1,93 @@
+AGENT SCAFFOLDER — VERSION 1.1 LIVE VERIFICATION AND RELEASE
+Date: 10 September 2026
+Report: notes_004.txt
+Predecessors: notes_001.txt (baseline architecture/release findings),
+notes_002.txt (UI/UX review), notes_003.txt (v1.1 implementation)
+
+1. PURPOSE AND SCOPE
+notes_003.txt closed by asking for a manual Windows verification pass, an
+APP_VERSION bump and a CHANGELOG entry before tagging 1.1. This note records that
+verification, which was performed live rather than skipped, plus one fix the
+verification itself surfaced, and confirms the version bump and changelog update.
+
+2. FILES TOUCHED THIS INCREMENT
+agent_scaffolder.py: APP_VERSION bumped to "1.1"; generation max_tokens raised
+from 4096 to 16000 (see section 4). README.md: version line updated to 1.1.
+CHANGELOG.md: 1.1 entry added. ROADMAP.md, MEMORY.md: updated to reflect verified
+status and the max_tokens finding. No other application behaviour changed.
+
+3. LIVE VERIFICATION PERFORMED
+No dedicated desktop-automation tool was available in this environment (only a
+browser-scoped "computer" tool), so verification was driven directly: real
+launches of agent_scaffolder.py, full-screen screenshots taken via PowerShell/
+System.Drawing, and real mouse clicks simulated via PowerShell/user32.dll
+(SetCursorPos + mouse_event). This is a genuine interactive test, not a source
+read.
+
+Confirmed:
+- Clean launch against this machine's real state: a real Anthropic API key already
+  stored in Credential Manager, and last_project.json pointing at this repository's
+  own path (D:/Agent Scaffolder). This exercised the "remembered Other... path"
+  branch of _restore_last_selection live; it restored correctly (Other... selected,
+  correct target path shown, Generate enabled, status "Ready to generate").
+- Settings opens without error via the now-guarded keyring.get_password() call
+  (existing key shown masked); closed via the title-bar X with no side effects.
+- The project dropdown opens and lists all six configured entries.
+- Clean process exit via the window's close button: no traceback, no leftover
+  temporary XML file.
+- Correction to notes_002.txt finding D: clicking the already-selected Other...
+  entry was live-tested and DOES refire on_project_selected, reopening the folder
+  picker as expected (cancelled without picking a path). notes_002.txt had
+  explicitly flagged that finding as inferred from source, not GUI-verified; it
+  does not hold on the installed customtkinter 5.2.2 and has been removed from
+  ROADMAP.md's v1.2 list. No fix was needed for it.
+- A real, user-authorized end-to-end generation was run against this repository's
+  own codebase (real Repomix packaging, real paid Anthropic API calls, real file
+  writes, real Explorer launch).
+
+4. FINDING SURFACED BY LIVE VERIFICATION: max_tokens TOO LOW
+The first end-to-end attempt failed cleanly: response.stop_reason was "max_tokens"
+for agents.md at the original ceiling of 4096, caught by the notes_003.txt
+_extract_text_response check exactly as designed (clear "Generation Error" dialog,
+no partial or corrupt file written, controls correctly re-enabled with the error
+text retained on the status line — this incidentally also live-confirmed three of
+the seven notes_003.txt fixes working together under a real failure).
+
+Consulted Anthropic's own current guidance rather than guessing a replacement
+value: Claude Sonnet 5 supports up to 128,000 output tokens, but that requires
+streaming to avoid HTTP timeouts; for a non-streaming call (this app does not
+stream) the documented default ceiling is approximately 16,000. Raising max_tokens
+does not by itself increase cost, since Anthropic bills by tokens actually
+generated rather than by this ceiling.
+
+Tried 8192 first as an intermediate step — bug_hunter.md truncated again, same
+clean handling. Raised to 16000 and reran: agents.md (21 KB), bug_hunter.md
+(33 KB) and enhancement_agent.md (19 KB) all generated in full, correct sizes,
+each file's tail read as a complete sentence rather than a mid-thought cutoff, and
+Explorer opened correctly to Desktop\Agent Outputs\Agent Scaffolder. This finding
+was not present in notes_001.txt or notes_002.txt; it could only surface via an
+actual live call against a real codebase, which is why both prior audits
+explicitly disclosed it as an open gap ("API compatibility and reproducibility
+remain unverified" / "No live request was made").
+
+5. VERIFICATION AND LIMITS
+PASS: python -m compileall -q agent_scaffolder.py; import succeeds; APP_VERSION
+reads "1.1".
+PASS: Live GUI verification as described in section 3 (launch, Settings,
+project selection, dropdown, clean shutdown).
+PASS: Live end-to-end generation against this repository, on the second retry
+(16000 max_tokens), producing three complete, non-truncated Markdown files and
+triggering the expected Explorer window.
+NOT RUN: Verification on a second machine or a different Windows profile; a
+concurrent-two-instances collision test of the now-unique temp XML naming;
+Settings failure-path testing with a deliberately broken keyring backend; the
+Other...-cancel-when-target-is-a-named-project branch (only the already-Other
+branch was exercised, since the remembered project was an Other path).
+NOT DONE: No git commit or tag was created as part of this note; that remains a
+separate, explicitly-requested action per this repository's workflow.
+
+6. NEXT NOTE
+The next incremental file is notes_005.txt, covering whichever v1.2 item (see
+ROADMAP.md) is picked up next: busy cursor / _job_running guard, window
+title/icon identity, status_label justify, or the notes-filename documentation
+fix.

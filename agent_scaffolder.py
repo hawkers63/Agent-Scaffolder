@@ -3,12 +3,13 @@ import os
 import shutil
 import subprocess
 import threading
+import uuid
 import customtkinter as ctk
 import anthropic
 import keyring
 from tkinter import filedialog, messagebox
 
-APP_VERSION = "1.0"
+APP_VERSION = "1.1"
 
 # Credential Manager service for Anthropic API key (never store keys in files)
 SERVICE_NAME = "AgentScaffolderApp"
@@ -41,12 +42,40 @@ DEFAULT_PROJECTS = [
 OTHER_LABEL = "Other..."
 
 
+class ScaffoldingError(Exception):
+    """A recognized generation failure with a message safe to show the user."""
+
+
 def ensure_projects_file():
     """Seed projects.json with the default five entries if missing."""
     if os.path.isfile(PROJECTS_FILE):
         return
-    with open(PROJECTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(DEFAULT_PROJECTS, f, indent=2)
+    try:
+        with open(PROJECTS_FILE, "w", encoding="utf-8") as f:
+            json.dump(DEFAULT_PROJECTS, f, indent=2)
+    except OSError:
+        pass
+
+
+def _valid_project_entries(data):
+    """Keep only well-formed {name, path} entries with non-empty, unique names."""
+    valid = []
+    seen_names = set()
+    for entry in data:
+        if not isinstance(entry, dict):
+            continue
+        name = entry.get("name")
+        path = entry.get("path")
+        if not isinstance(name, str) or not name.strip():
+            continue
+        if not isinstance(path, str) or not path.strip():
+            continue
+        name = name.strip()
+        if name == OTHER_LABEL or name in seen_names:
+            continue
+        seen_names.add(name)
+        valid.append({"name": name, "path": path})
+    return valid
 
 
 def load_projects():
@@ -54,8 +83,10 @@ def load_projects():
     try:
         with open(PROJECTS_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-        if isinstance(data, list) and data:
-            return data
+        if isinstance(data, list):
+            valid = _valid_project_entries(data)
+            if valid:
+                return valid
     except (OSError, json.JSONDecodeError):
         pass
     return list(DEFAULT_PROJECTS)
@@ -65,9 +96,11 @@ def load_last_project_path():
     try:
         with open(LAST_PROJECT_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
-        if isinstance(data, dict) and data.get("path"):
-            return data["path"]
-        if isinstance(data, str) and data:
+        if isinstance(data, dict):
+            path = data.get("path")
+            if isinstance(path, str) and path.strip():
+                return path
+        elif isinstance(data, str) and data.strip():
             return data
     except (OSError, json.JSONDecodeError):
         pass
@@ -89,6 +122,16 @@ def safe_folder_name(name):
     return cleaned or "Project"
 
 
+def _extract_text_response(response, agent_name):
+    """Pull generated Markdown out of an Anthropic response, or raise a clear error."""
+    if getattr(response, "stop_reason", None) == "max_tokens":
+        raise ScaffoldingError(f"{agent_name}: response was truncated (hit the token limit)")
+    blocks = getattr(response, "content", None)
+    if not blocks or getattr(blocks[0], "type", None) != "text" or not (blocks[0].text or "").strip():
+        raise ScaffoldingError(f"{agent_name}: model returned no text content")
+    return blocks[0].text.strip()
+
+
 class SettingsWindow(ctk.CTkToplevel):
     def __init__(self, *args, on_saved=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -106,7 +149,13 @@ class SettingsWindow(ctk.CTkToplevel):
         self.api_key_entry = ctk.CTkEntry(self, width=360, show="*")
         self.api_key_entry.pack(padx=20, pady=(0, 15))
 
-        existing_key = keyring.get_password(SERVICE_NAME, ACCOUNT_NAME)
+        try:
+            existing_key = keyring.get_password(SERVICE_NAME, ACCOUNT_NAME)
+        except Exception as e:
+            existing_key = None
+            messagebox.showerror(
+                "Credential Store Error", f"Could not read the stored API key: {e}"
+            )
         if existing_key:
             self.api_key_entry.insert(0, existing_key)
 
@@ -115,13 +164,17 @@ class SettingsWindow(ctk.CTkToplevel):
 
     def save_settings(self):
         new_key = self.api_key_entry.get().strip()
-        if new_key:
-            keyring.set_password(SERVICE_NAME, ACCOUNT_NAME, new_key)
-        else:
-            try:
-                keyring.delete_password(SERVICE_NAME, ACCOUNT_NAME)
-            except keyring.errors.PasswordDeleteError:
-                pass
+        try:
+            if new_key:
+                keyring.set_password(SERVICE_NAME, ACCOUNT_NAME, new_key)
+            else:
+                try:
+                    keyring.delete_password(SERVICE_NAME, ACCOUNT_NAME)
+                except keyring.errors.PasswordDeleteError:
+                    pass
+        except Exception as e:
+            messagebox.showerror("Credential Store Error", f"Could not save the API key: {e}")
+            return
 
         callback = self.on_saved
         self.destroy()
@@ -255,28 +308,29 @@ class ScaffoldingApp(ctk.CTk):
         return os.path.join(OUTPUT_ROOT, name)
 
     def has_api_key(self):
-        return bool(keyring.get_password(SERVICE_NAME, ACCOUNT_NAME))
+        try:
+            return bool(keyring.get_password(SERVICE_NAME, ACCOUNT_NAME))
+        except Exception:
+            return False
 
     def project_path_valid(self):
         return bool(self.target_dir and os.path.isdir(self.target_dir))
 
-    def refresh_ui_state(self):
+    def refresh_ui_state(self, update_status_text=True):
         key_ok = self.has_api_key()
         path_ok = self.project_path_valid()
         if key_ok and path_ok:
             self.generate_btn.configure(state="normal")
-            self.status_label.configure(text="Ready to generate")
+            if update_status_text:
+                self.status_label.configure(text="Ready to generate")
         elif not key_ok:
             self.generate_btn.configure(state="disabled")
-            self.status_label.configure(text="API key required - enter it in Settings")
+            if update_status_text:
+                self.status_label.configure(text="API key required - enter it in Settings")
         else:
             self.generate_btn.configure(state="disabled")
-            self.status_label.configure(text="Select a valid project directory")
-
-    def refresh_key_state(self):
-        self.refresh_ui_state()
-        if not self.has_api_key():
-            self.open_settings()
+            if update_status_text:
+                self.status_label.configure(text="Select a valid project directory")
 
     def first_run_check(self):
         if not self.has_api_key():
@@ -285,7 +339,7 @@ class ScaffoldingApp(ctk.CTk):
 
     def open_settings(self):
         if self.settings_window is None or not self.settings_window.winfo_exists():
-            self.settings_window = SettingsWindow(self, on_saved=self.refresh_key_state)
+            self.settings_window = SettingsWindow(self, on_saved=self.refresh_ui_state)
             self.settings_window.focus()
         else:
             self.settings_window.focus()
@@ -297,11 +351,17 @@ class ScaffoldingApp(ctk.CTk):
         if not self.project_path_valid():
             self.status_label.configure(text="Select a valid project directory")
             return
+        # Snapshot the selection on the UI thread; the worker never touches
+        # target_dir or project_menu again once it starts.
+        target_dir = self.target_dir
+        output_dir = self._output_folder_for_selection()
         self.generate_btn.configure(state="disabled")
         self.settings_btn.configure(state="disabled")
         self.project_menu.configure(state="disabled")
         self.update_status("Packaging codebase with Repomix...")
-        threading.Thread(target=self.run_scaffolding, daemon=True).start()
+        threading.Thread(
+            target=self.run_scaffolding, args=(target_dir, output_dir), daemon=True
+        ).start()
 
     def update_status(self, text):
         self.after(0, lambda: self.status_label.configure(text=text))
@@ -329,29 +389,20 @@ class ScaffoldingApp(ctk.CTk):
             env["PATH"] = os.pathsep.join(path_parts) + os.pathsep + env.get("PATH", "")
         return env
 
-    def run_scaffolding(self):
-        api_key = keyring.get_password(SERVICE_NAME, ACCOUNT_NAME)
-        if not api_key:
-            self._show_error(
-                "API Key Missing",
-                "API Key missing. Please set it in Settings.",
-            )
-            self.after(0, self.reset_buttons)
-            return
-
-        target_dir = self.target_dir
-        if not target_dir or not os.path.isdir(target_dir):
-            self._show_error("Invalid Directory", "Invalid project directory.")
-            self.after(0, self.reset_buttons)
-            return
-
-        output_dir = self._output_folder_for_selection()
-        # Keep temporary Repomix XML under APP_DIR so we do not litter the project root.
-        xml_path = os.path.join(APP_DIR, ".repomix-context.xml")
-        env = self._build_subprocess_env()
-        client = anthropic.Anthropic(api_key=api_key)
+    def run_scaffolding(self, target_dir, output_dir):
+        # Unique per-run temp XML under APP_DIR so concurrent instances don't collide,
+        # and everything below (including the keyring read) sits inside one
+        # try/finally so any failure still re-enables the UI.
+        xml_path = os.path.join(APP_DIR, f".repomix-context-{uuid.uuid4().hex}.xml")
 
         try:
+            api_key = keyring.get_password(SERVICE_NAME, ACCOUNT_NAME)
+            if not api_key:
+                raise ScaffoldingError("API Key missing. Please set it in Settings.")
+
+            env = self._build_subprocess_env()
+            client = anthropic.Anthropic(api_key=api_key)
+
             os.makedirs(output_dir, exist_ok=True)
 
             repomix_bin = shutil.which("repomix", path=env.get("PATH"))
@@ -399,6 +450,10 @@ class ScaffoldingApp(ctk.CTk):
                 },
             ]
 
+            # Stage all three responses in memory first. Nothing on disk is touched
+            # until every request has succeeded, so a failure partway through
+            # leaves the previous output files exactly as they were.
+            generated = {}
             for agent in agents:
                 self.update_status(f"Generating {agent['name']}...")
 
@@ -415,21 +470,25 @@ class ScaffoldingApp(ctk.CTk):
 
                 response = client.messages.create(
                     model=MODEL,
-                    max_tokens=4096,
+                    # 4096 and then 8192 both truncated real "comprehensive" docs on
+                    # live use (see notes/notes_003.txt addendum). 16000 is Anthropic's
+                    # documented default ceiling for a non-streaming call (this one is
+                    # non-streaming); Sonnet 5 supports up to 128K but that requires
+                    # streaming to avoid HTTP timeouts. Anthropic bills by tokens
+                    # actually generated, not by this ceiling, so raising it doesn't
+                    # cost more unless the response genuinely needs the room.
+                    max_tokens=16000,
                     thinking={"type": "disabled"},
                     messages=[{"role": "user", "content": prompt_text}],
                 )
 
-                out_path = os.path.join(output_dir, agent["name"])
-                with open(out_path, "w", encoding="utf-8") as out_file:
-                    out_file.write(response.content[0].text.strip())
+                generated[agent["name"]] = _extract_text_response(response, agent["name"])
 
-            self.update_status("Cleaning up temporary files...")
-            if os.path.exists(xml_path):
-                try:
-                    os.remove(xml_path)
-                except OSError:
-                    pass
+            self.update_status("Writing generated files...")
+            for name, text in generated.items():
+                out_path = os.path.join(output_dir, name)
+                with open(out_path, "w", encoding="utf-8") as out_file:
+                    out_file.write(text)
 
             done_msg = f"Agent scaffolding complete!\nOutput: {output_dir}"
             self.update_status(done_msg)
@@ -442,10 +501,11 @@ class ScaffoldingApp(ctk.CTk):
                 "Authentication Error",
                 "Invalid API Key. Please update it in Settings.",
             )
+        except ScaffoldingError as e:
+            self._show_error("Generation Error", str(e))
         except Exception as e:
             self._show_error("API/System Error", str(e))
         finally:
-            # Always try to remove temp XML under APP_DIR
             if os.path.exists(xml_path):
                 try:
                     os.remove(xml_path)
@@ -456,7 +516,9 @@ class ScaffoldingApp(ctk.CTk):
     def reset_buttons(self):
         self.settings_btn.configure(state="normal")
         self.project_menu.configure(state="normal")
-        self.refresh_ui_state()
+        # Restore button enablement without clobbering the success/error text
+        # the job just posted; the next user action refreshes it normally.
+        self.refresh_ui_state(update_status_text=False)
 
 
 if __name__ == "__main__":

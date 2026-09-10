@@ -1,6 +1,6 @@
 AGENT SCAFFOLDER — VERSION 1.0 BASELINE REPORT
 Date: 10 September 2026
-Report: notes1.txt
+Report: notes_001.txt
 
 1. PURPOSE AND SCOPE
 Establish the current application as version 1.0, prepare the GitHub repository,

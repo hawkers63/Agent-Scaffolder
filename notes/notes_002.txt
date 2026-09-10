@@ -1,0 +1,412 @@
+AGENT SCAFFOLDER — VERSION 1.0 UI/UX AND FEATURE-SURFACE REVIEW
+Date: 10 September 2026
+Report: notes_002.txt
+Predecessor: notes_001.txt (version 1.0 baseline, architecture and release findings)
+Author role: Feature development and UI/UX specialist (agents/enhancement_agent.md)
+
+1. PURPOSE AND SCOPE
+Record a detailed review of the live CustomTkinter surface of Agent Scaffolder 1.0
+against the design language, widget standards, state-refresh discipline and
+interaction rules in agents/enhancement_agent.md. This note does not change
+generation behaviour, model choice, output location, credential storage or the
+single-file architecture. No widgets, windows or copy are modified in this
+review. Existing behaviour is treated as the contract; findings are targeted
+follow-ups, not an invitation to restyle the app or split the module.
+
+The review is limited to user-visible structure, control hierarchy, modal
+behaviour, enablement rules, status messaging, persistence that the UI depends
+on, and the feature surface that a later increment might add without breaking
+the compact-utility philosophy. Defects that are primarily exception handling,
+subprocess safety or API compatibility remain owned by notes_001.txt unless they
+have a direct user-facing consequence.
+
+2. METHOD AND CONSTRAINTS
+Read agent_scaffolder.py in full, plus agents/enhancement_agent.md, agents.md,
+bug_hunter.md, README.md, CHANGELOG.md, CONTRIBUTING.md, Run-Agent-Scaffolder.bat,
+requirements-scaffolder.txt, projects.json, last_project.json and notes_001.txt.
+No dedicated task-tracking tool was available; this is a standalone review with
+an announced scope and no implementation.
+
+The application was not launched on Windows. No CustomTkinter mainloop, no
+filedialog, no Settings grab_set cycle, no keyring read/write and no live
+generation run were performed. Widget measurements, clipping, dark/light contrast
+and OptionMenu re-selection behaviour are inferred from source and CTk/Tk
+conventions, not from a visual pass. Where a finding depends on a live GUI
+check, that is stated.
+
+3. CURRENT UI INVENTORY
+The product is a single main window plus one modal dialog. There is no menu bar,
+toolbar, tab set, sidebar, progress bar, spinner, context menu, tray icon or
+status-bar widget. Progress is a single grey CTkLabel.
+
+Main window (ScaffoldingApp, ctk.CTk)
+- Geometry: 520x340. Title: f"Agent Scaffolder v{APP_VERSION}".
+- In-window heading: "Project Agent Generator", Segoe UI 18 bold, pady (16, 4).
+- Section label: "Choose project:", anchor west, padx 24.
+- Project selector: CTkOptionMenu width 360, values from projects.json names
+  plus the reserved OTHER_LABEL "Other...". command=on_project_selected.
+- Path label: grey, wraplength 460, justify left. Shows "Target: {path}",
+  "Target: {path} (path missing)" or "No project selected".
+- Status label: grey, wraplength 460, no justify. Initial text "Ready", then
+  overwritten by refresh_ui_state / update_status.
+- Primary button: "Generate Agents" (default CTk accent).
+- Secondary button: "Settings", fg_color gray, hover_color #555555.
+- Layout manager: pack() only. Horizontal content padding 24.
+- No minsize, maxsize, resizable(False) or iconbitmap.
+- No keyboard bindings, default-button binding or accelerator text.
+
+Settings dialog (SettingsWindow, ctk.CTkToplevel)
+- Geometry: 400x200. Title: "Settings". grab_set() for modality.
+- Heading: "API Configuration", Segoe UI 16 bold, pady (15, 10).
+- Section label: "Anthropic API Key:", anchor west, padx 20.
+- Masked entry: CTkEntry width 360, show="*". Prefilled from keyring when a
+  value exists.
+- Primary button: "Save Key". No Cancel, no Show/Hide, no help sentence.
+- Singleton guarded by settings_window is None or not winfo_exists().
+- No transient(master), no WM_DELETE_WINDOW protocol, no Escape binding.
+
+Persisted UI state
+- projects.json: list of {name, path}. Seeded once if missing.
+- last_project.json: {"path": "..."}. Written from _set_target(remember=True).
+- API key: Windows Credential Manager via keyring, never JSON.
+
+4. DESIGN LANGUAGE AUDIT
+The live widgets already match the enhancement-agent contract on the points
+that matter for a small utility. Findings below are deviations or gaps, not
+a call to introduce a new visual system.
+
+Compliant
+- Exclusive CustomTkinter widgets except filedialog and messagebox.
+- Segoe UI only, 18 bold on the main heading, 16 bold on the dialog heading.
+- Grey text for path and status. Grey Settings button versus accent Generate.
+- pack() throughout; no grid/place mix.
+- Main padding padx 24 / dialog padx 20. Vertical rhythm uses the documented
+  pady tuples, with one small exception (Settings title pady (15, 10) rather
+  than (16, 4) or (16, 10)). That difference is not user-visible at this size.
+- Compact windows. Settings is a dedicated Toplevel, not extra main-window
+  chrome.
+- Generate is the single primary action on the main window; Save Key is the
+  single primary action on Settings.
+
+Gaps against the written standard
+- No appearance-mode or colour-theme call. CTk default is acceptable, but the
+  hard-coded Settings hover #555555 is a dark-grey chip that can look muddy
+  on CTk light mode. If theming is ever set, it must be once at import time,
+  then the hover colour must be re-checked on both modes.
+- status_label has wraplength but not justify="left". Long error strings and
+  the success path (which includes a newline plus an output directory) will
+  centre-ish wrap and look less aligned than the path label beneath the same
+  column.
+- Window chrome identity is split: the OS title is "Agent Scaffolder v1.0"
+  while the in-window heading is "Project Agent Generator". Users scanning
+  the taskbar and the window will not see the same product name. Pick one
+  heading family in a later copy pass; do not add a second subtitle.
+- agents.md still lists mstscax_13417.ico. That file is not in this checkout
+  and the window never calls iconbitmap / iconphoto. The taskbar therefore
+  shows the default Python/Tk icon. Do not invent a licence or provenance
+  for a missing asset; either restore a rights-cleared icon in a later
+  increment or stop documenting it.
+- The main window can be resized. pack() will clip or leave a large empty
+  band. A utility of this size should either lock resizable(False, False)
+  or set a minsize equal to the design size (520x340). Oversized dashboard
+  layouts remain out of scope.
+
+5. STATE AND ENABLEMENT AUDIT
+refresh_ui_state() is correctly the single derived-state function: Generate
+is enabled only when has_api_key() and project_path_valid() are both true,
+and the status line explains which prerequisite is missing. has_api_key() is
+not cached, matching the "read keyring each time" rule. _set_target is the
+only writer of target_dir from UI paths and always refreshes the path label
+plus derived state. _suppress_project_event is used on every programmatic
+OptionMenu.set during restore. Settings is a singleton Toplevel.
+
+Issues that affect the user even when the logic is internally consistent:
+
+A. Result status is discarded.
+reset_buttons() re-enables Settings and the project menu, then calls
+refresh_ui_state(), which overwrites the success or error status with
+"Ready to generate", "API key required - enter it in Settings" or
+"Select a valid project directory". Combined with notes_001 HIGH (worker
+exceptions before try/finally) this means the only durable failure signal
+is a messagebox the user can dismiss. The status label cannot serve as
+the "ask the reporter what it last said" diagnostic described in
+bug_hunter.md. Split control refresh from result text: restore enablement
+without clobbering a terminal status until the next user action.
+
+B. Busy state is incomplete.
+start_generation disables Generate, Settings and the project menu, which
+is correct. It does not:
+- set a busy/wait cursor
+- ignore a second Generate click via a self._job_running flag (the button
+  disable is the only guard; a queued event or programmatic invoke could
+  still start a second daemon thread)
+- provide Cancel
+- disable the path-changing surface only; the window close button still
+  destroys a daemon worker and can leave .repomix-context.xml or a
+  half-written Markdown file
+Document close-during-job rather than adding a progress bar. If a later
+increment adds cancellation, it belongs on a secondary grey button and
+must join/kill only the subprocess, not the Tk loop.
+
+C. Settings save can crash the UI thread.
+keyring.get_password in SettingsWindow.__init__ and keyring.set_password
+in save_settings are unguarded on the main thread. A backend error is a
+hard UI failure with no status line and no dialog. Empty Save deletes the
+key with no confirmation, then on_saved -> refresh_key_state re-opens
+Settings immediately if the key is now missing. That is a loop: first-run
+nudge and "I cleared the key" become the same path. Distinguish first-run
+prompt from a deliberate clear; do not auto-reopen after the user just
+saved an empty field.
+
+D. Other... cannot be chosen twice in a row.
+CTkOptionMenu typically does not fire command when the displayed value is
+selected again. After an Other directory is in force, choosing Other...
+again does nothing; the user must pick a named project and then Other...
+to change the custom path. Either add a small secondary "Browse..." button
+(grey, shown when Other is active or always adjacent to the menu) or reset
+the menu to the previous named value after a successful Other pick so that
+Other... remains a re-selectable action. Do not add a second file-dialog
+library.
+
+E. Path-missing is visible but not actionable.
+A remembered or listed path that is not a directory shows " (path missing)"
+and disables Generate. There is no "Browse to replace this path" affordance
+and no in-app editor for projects.json. Power users can edit JSON while the
+app is closed, as the README states; that is acceptable for 1.0, but the
+label should remain the only extra chrome until a project-manager dialog
+is explicitly requested.
+
+F. Worker reads a live widget.
+_output_folder_for_selection() calls project_menu.get() from the worker
+thread (notes_001 MEDIUM). User-facing effect: output folder naming can
+raise during shutdown, and a menu mutation racing the worker could name
+the Desktop folder after the wrong project. Capture the output path on
+the main thread in start_generation and pass it in.
+
+6. INTERACTION FLOWS
+6.1 First run
+ensure_projects_file seeds defaults if needed. ScaffoldingApp packs widgets,
+restores last selection (or first existing default path, or first list
+entry), then after(200, first_run_check). If no API key, Settings opens
+automatically. The 200 ms delay avoids racing geometry but produces a
+brief empty-key main window before the modal. Acceptable. first_run_check
+also calls refresh_ui_state, which is redundant with _restore_last_selection
+but harmless.
+
+6.2 Project selection
+Named choice -> _set_target(path, remember=True). Other... -> askdirectory.
+Cancel on Other... reverts the menu to the matching named project when
+target_dir still maps to one; if the current target is already an Other
+path, the menu stays on Other... and refresh_ui_state runs. Missing-path
+defaults still call _set_target, so Generate stays disabled with a clear
+status. Restore uses normcase+abspath, which is correct on Windows.
+
+6.3 Settings
+Open is singleton + focus. Save Key strips whitespace; non-empty writes
+keyring, empty deletes. Window destroy then on_saved. Closing with the
+title-bar X discards an unsaved edit with no prompt. There is no Cancel
+control; X is the implicit cancel. For a 400x200 dialog that is tolerable
+if documented; adding a grey Cancel that destroy()s without writing would
+match the primary/secondary hierarchy without growing the window much.
+Do not add a second settings page for model/output in this dialog — those
+are env-var and Desktop-contract concerns. A later model override UI, if
+requested, should be a separate compact Toplevel, not extra fields here.
+
+6.4 Generate
+Guards key and path on the UI thread, disables controls, sets
+"Packaging codebase with Repomix...", starts a daemon thread. Status then
+walks "Generating agents.md / bug_hunter.md / enhancement_agent.md",
+"Cleaning up temporary files...", then a two-line completion message.
+On success the app Popen's explorer.exe on the output folder with no
+opt-out and no "already open" reuse. That is a strong 1.0 choice for a
+utility whose purpose is "files land on the Desktop"; keep it, but if a
+preference is added later, persist it with the existing JSON load/save
+pattern, not a Tk variable class.
+
+Overwrite behaviour is silent: the three Markdown names replace in place,
+one at a time. A mid-loop API failure leaves a mix of new and old files
+(notes_001 MEDIUM) and the UI currently cannot say which of the three
+landed. When staging is added, the status line should report a single
+commit ("Wrote 3 files to ...") or a precise partial failure ("Wrote
+agents.md and bug_hunter.md; enhancement_agent.md failed, previous file
+kept"). Do not add a progress bar to express 1 of 3.
+
+6.5 Errors
+Hard failures use _show_error: status "Error: ..." plus messagebox.showerror
+marshalled with after(0, ...). Repomix, AuthenticationError and a generic
+Exception are distinguished. FileNotFound for explorer is swallowed — the
+folder still exists, so that is acceptable. AuthenticationError copy
+("Invalid API Key. Please update it in Settings.") is good; the user can
+open Settings after reset_buttons re-enables it. Generic str(e) can dump
+an IndexError or SDK traceback fragment into a dialog; that is a QA issue
+with UX impact (hostile copy). Keep messagebox for hard failures; do not
+switch to toast-only.
+
+7. COPY AND AFFORDANCE NOTES
+- Status "API key required - enter it in Settings" uses a hyphen. Match
+  the rest of the app ("Ready to generate") and prefer an em-dash or
+  "API key required. Open Settings to enter it."
+- Success uses an exclamation mark and an embedded newline. A single
+  wrapped sentence plus the path is enough: "Scaffolding complete. Output:
+  {output_dir}".
+- Generate does not state that three paid API requests will run or that
+  existing Markdown will be overwritten. A one-line grey help label under
+  the buttons would violate the compact layout; put a short warning in the
+  status line immediately before packaging ("This overwrites agents.md,
+  bug_hunter.md and enhancement_agent.md in the output folder") or in the
+  README only. Do not add a confirmation modal unless overwrite-loss is
+  reported as a real incident — extra dialogs fight the utility tone.
+- Settings has no sentence that the key is stored in Windows Credential
+  Manager and never in JSON. A wraplength grey help label (wraplength ~360,
+  padx 20) fits the 400x200 window if the geometry grows slightly (for
+  example 400x240), which is still within "compact, single-purpose".
+- README points at notes/notes1.txt; the actual files are notes_001.txt
+  and this notes_002.txt. CHANGELOG says notes/notes1.txt. CONTRIBUTING
+  says notes/notesN.txt. Align documentation to notes_NNN.txt in a
+  documentation-only follow-up.
+
+8. FEATURE SURFACE — WHAT NOT TO ADD
+The enhancement-agent instructions list possible later features
+(additional agent types, export options, a project-management UI). None
+of these are in 1.0 and none should be smuggled in under a visual polish
+pass.
+
+Rejected without an explicit product request
+- Progress bar, spinner, determinate 0–3 agent gauge.
+- grid() or place() layouts, ttk, Qt, wx, web UI, async.
+- Tk StringVar/BooleanVar bindings.
+- In-window project CRUD, drag-and-drop, recent-files menu.
+- Model picker, token slider, prompt editor.
+- Dark-mode toggle per widget, custom colour themes, new fonts.
+- Second credential store, .env, JSON API keys.
+- Writing generated files into the target repository.
+- Changing OUTPUT_ROOT away from Desktop/Agent Outputs/<project>.
+
+Acceptable later increments if asked, each as a small change
+- Lock window size or set minsize; set a rights-cleared icon.
+- Grey Cancel on Settings; optional Show/Hide on the key entry.
+- Browse... secondary button to fix Other... re-selection.
+- Preserve terminal status in reset_buttons.
+- Capture output path and project snapshot on the UI thread.
+- Help sentence in Settings about keyring.
+- Align product name (window title vs in-window heading).
+- Documentation path fix for notes_NNN.txt.
+- If a project manager is requested: new CTkToplevel ~400xN, pack() only,
+  Segoe UI, grey Close / accent Save, rewrite projects.json through the
+  existing load/save try/except pattern, never a database.
+
+Any new interactive control must extend refresh_ui_state() rather than
+adding one-off enable checks. Any new programmatic OptionMenu.set must
+use _suppress_project_event. Any background work must disable controls
+and re-enable them from finally via after(0, reset_buttons).
+
+9. FINDINGS AND TARGETED FOLLOW-UP RECOMMENDATIONS
+These findings are not implemented in this review. They are ordered for a
+later increment. Architecture defects already in notes_001.txt are cited,
+not restated as new root causes.
+
+HIGH — Terminal status is overwritten when controls are restored.
+Location: ScaffoldingApp.reset_buttons -> refresh_ui_state.
+User impact: success path and error path both collapse to a generic Ready
+or prerequisite message; the status label cannot be used as a diagnostic.
+Recommendation: teach refresh_ui_state to update enablement only, or pass
+a retain_status flag from reset_buttons. Test queued success, error and
+prerequisite-missing callback order.
+
+HIGH — Keyring failures and empty-save reopen loop live on the UI thread.
+Locations: SettingsWindow.__init__, save_settings, refresh_key_state.
+User impact: credential-store errors can abort the dialog with no
+messagebox; clearing a key immediately reopens Settings.
+Recommendation: wrap get/set/delete with the same error dialog pattern as
+_show_error; confirm empty save; do not call open_settings from the save
+callback. Retain the entered value if save fails. No plaintext fallback.
+
+MEDIUM — Other... is not re-selectable while already selected.
+Location: on_project_selected, CTkOptionMenu command behaviour.
+User impact: custom-directory users cannot change folder without an
+intermediate named-project click.
+Recommendation: secondary grey Browse... control, or reset the displayed
+menu value after a successful Other pick so Other... fires again. Test
+cancel, successful pick, and second consecutive Other pick.
+
+MEDIUM — Worker consults project_menu.get() (user-facing naming risk).
+Location: run_scaffolding -> _output_folder_for_selection.
+Already recorded in notes_001. UX restatement: capture the output folder
+on the UI thread so the Desktop folder name cannot drift from the path
+label the user just confirmed.
+
+MEDIUM — No busy cursor, job flag or close-during-generation policy.
+Location: start_generation, window close (default CTk destroy), daemon
+Thread.
+User impact: the window looks idle-except-disabled; closing mid-job can
+leave temp XML and partial Markdown without an explanation.
+Recommendation: document the close-during-job behaviour in README; set a
+watch cursor for the run; add a simple _job_running guard. Do not add a
+progress bar. Cancellation is a separate explicit feature.
+
+MEDIUM — Window identity and missing icon.
+Locations: title vs title_label; no iconbitmap; agents.md icon reference.
+User impact: taskbar and window heading disagree; default Tk icon.
+Recommendation: use "Agent Scaffolder" as the in-window heading (version
+already lives in the OS title); remove or fulfil the icon documentation
+without inventing a licence.
+
+LOW — status_label alignment and Settings copy/hierarchy.
+status_label lacks justify="left". Settings has no Cancel, no keyring
+help sentence, no Escape-to-close, title pady (15, 10). Main window is
+user-resizable with no minsize.
+Recommendation: justify left; optional grey Cancel; one wraplength help
+label; resizable(False, False) or minsize(520, 340). Keep 400x200 unless
+the help label requires ~400x240.
+
+LOW — Silent overwrite and auto-open Explorer.
+Existing Markdown is replaced without a status warning; Explorer always
+opens.
+Recommendation: keep auto-open as the 1.0 contract. If overwrite surprise
+is reported, add one status-line warning at the start of the run, not a
+modal. Optional JSON preference for auto-open only if explicitly asked.
+
+LOW — Documentation note filename drift.
+README and CHANGELOG refer to notes/notes1.txt; CONTRIBUTING refers to
+notesN.txt; files are notes_001.txt / notes_002.txt.
+Recommendation: documentation-only alignment. Preserve earlier notes.
+
+10. PRIORITY ORDER
+First: keep the last result on the status line, and stop Settings empty-save
+from reopening the dialog; guard keyring on the UI thread. These are the
+two changes that make the current chrome honest.
+Next: snapshot output path on the UI thread (shared with notes_001), then
+Other... re-selection via a small Browse control or menu reset.
+Then: busy cursor and a documented close-during-job note, product-name
+alignment, status justify, optional Settings Cancel/help, window minsize,
+notes filename documentation.
+Do not implement project-manager UI, extra agent types, progress bars,
+theming or a module split as part of these follow-ups.
+
+11. MAPPING TO notes_001.txt
+notes_001.txt remains the baseline for worker try/finally, JSON validation,
+staged writes, unique temp XML, reserved Windows device names, model/SDK
+verification and Git publication. This note adds the user-visible layer:
+status retention, Settings loop, OptionMenu re-selection, busy/close policy,
+naming/icon and compact-layout hygiene. Implementer should treat HIGH items
+here as the UI half of notes_001's "worker-wide exception handling and
+UI-thread snapshot" first priority, not as a parallel redesign.
+
+12. VERIFICATION AND LIMITS
+PASS: Source review of every CTk widget, pack() call, font, colour, geometry
+and command callback in agent_scaffolder.py against enhancement_agent.md.
+PASS: Confirmed no grid/place, no ttk, no Tk variables, no extra Toplevels,
+no progress bar, no second secret store.
+PASS: Confirmed refresh_ui_state / _set_target / _suppress_project_event /
+Settings singleton patterns exist as specified.
+NOT RUN: Windows GUI launch, visual dark/light contrast, keyboard tab order,
+OptionMenu same-value click, first-run 200 ms modal timing, Explorer open,
+live keyring, live generation.
+NOT CHANGED: agent_scaffolder.py, JSON state, requirements, launcher, agent
+Markdown, README, CHANGELOG. This report only.
+
+13. NEXT NOTE
+The next incremental file is notes_003.txt. If a follow-up implements any
+item in section 9, that note should list the files touched, the enablement
+rules added, and the focused UI checks actually performed on Windows,
+including which checks were skipped.

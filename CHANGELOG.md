@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.1 — 2026-09-10
+
+Correctness and reliability pass over the 1.0 baseline, driven by the findings in
+`notes/notes_001.txt` and `notes/notes_002.txt`. No new features, no change to the
+single-file architecture, generation prompts, or the Desktop output contract.
+
+- Worker setup (keyring read, Anthropic client construction, output-directory
+  creation) now runs inside the same try/finally as the rest of generation, so a
+  failure there still re-enables the UI.
+- `projects.json` and `last_project.json` entries are validated (non-dict entries,
+  non-string or empty name/path, reserved/duplicate names) instead of trusted as-is.
+- The selected project directory and output folder are snapshotted on the UI thread
+  before the background worker starts; the worker no longer reads live widgets.
+- The three generated files are staged in memory and only written once all three
+  requests succeed, and each response is checked for truncation or empty content
+  before being staged. A failed generation now leaves previously-generated output
+  completely untouched instead of a mix of new and old files.
+- The temporary Repomix XML file uses a unique per-run name, so two running
+  instances can no longer collide.
+- Settings dialog: keyring reads/writes are guarded with a clear error dialog
+  instead of crashing the UI thread; a deliberate empty save (clearing the key) no
+  longer immediately reopens the Settings window.
+- The status line now keeps the last success or error message instead of being
+  overwritten the instant the job finishes.
+- Raised the generation `max_tokens` from 4096 to 16000. The original limit
+  truncated real output on a live run against this repository (even 8192 wasn't
+  enough); 16000 is Anthropic's documented default ceiling for a non-streaming
+  call, and since usage is billed by tokens actually generated, this doesn't
+  increase cost unless a response genuinely needs the room.
+
+This release includes a live Windows verification pass — real launch, Settings,
+project selection, and a full real end-to-end generation run against this
+repository's own codebase — not just a syntax/import check. See
+`notes/notes_003.txt` (implementation) and `notes/notes_004.txt` (verification).
+
 ## 1.0 — 2026-09-10
 
 Initial versioned baseline of the existing application.

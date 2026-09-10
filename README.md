@@ -1,6 +1,6 @@
 # Agent Scaffolder
 
-Version **1.0** — a Windows desktop utility that turns project source context into tailored Markdown agent instructions. It generates configuration documents for an AI assistant; it does not generate or execute an autonomous Python agent.
+Version **1.1** — a Windows desktop utility that turns project source context into tailored Markdown agent instructions. It generates configuration documents for an AI assistant; it does not generate or execute an autonomous Python agent.
 
 The single-file Python application uses CustomTkinter, Repomix and the Anthropic API. Select a project, save an API key in Settings, and choose **Generate Agents**.
 
