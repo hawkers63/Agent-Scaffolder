@@ -133,8 +133,8 @@ Keep the single-file CustomTkinter architecture and follow `agents/enhancement_a
 
 ## Copyright & License
 
-Copyright (c) 2026 hawkers63. All rights reserved.
+Copyright (c) 2026 Mark Hawksworth (hawkers63). All rights reserved.
 
-This project is proprietary software. No open-source or permissive licence is granted. Without prior written consent from hawkers63, you may not copy, reproduce, redistribute, modify, reverse-engineer, or use this software for commercial purposes.
+This project is proprietary software. No open-source or permissive licence is granted. Without prior written consent from Mark Hawksworth (hawkers63), you may not copy, reproduce, redistribute, modify, reverse-engineer, or use this software for commercial purposes.
 
 See [LICENSE](LICENSE) for the full All Rights Reserved notice.
