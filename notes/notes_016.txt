@@ -1,0 +1,86 @@
+AGENT SCAFFOLDER — BATCH-2 LIVE-TEST CHECKPOINT (v1.8-v1.11)
+Date: 11 September 2026
+Report: notes_016.txt
+Predecessor: notes_015.txt (v1.11 in-app project manager)
+Author role: Quality assurance and debugging specialist
+
+1. PURPOSE
+Live-verification checkpoint for batch 2 (1.8-1.11), per the testing
+cadence. User explicitly authorized real API spend and a push afterward
+("That's terrific work. Go ahead.").
+
+2. METHOD
+Two features needed a real live check the earlier code-only releases
+couldn't provide: numbered output (1.8) needs a real Anthropic response to
+confirm end-to-end, and exclusion passthrough (1.10) needs a real Repomix
+run to confirm the flag actually changes packaged output. The other two
+(1.9 timeout, 1.11 project manager) were already verified live or via
+isolated tests with no cost-relevant gap remaining (notes_013.txt,
+notes_015.txt).
+
+Part A (numbered output): drove the real `ScaffoldingApp` via
+`app.mainloop()` + `app.after(...)`-scheduled steps, no `subprocess.Popen`
+patching (per the standing rule from the 1.9/1.10 hangs) - real Repomix,
+real Anthropic call, against this repo's own existing output folder
+(`Desktop/Agent Outputs/Agent Scaffolder`, which already had an `agents.md`
+from the batch-1 checkpoint, written before numbered output existed).
+
+Part B (exclusion passthrough): tested directly against the real `repomix`
+binary with no app/Tk/Python-agent_scaffolder code involved at all, since
+the actual claim to verify is "does Repomix's own `--ignore` flag exclude
+matching files" - the app's role (constructing the command with `--ignore`
+appended) was already proven correct via pure-logic tests in notes_014.txt.
+First attempt used `*.log` as the excluded pattern and got a false pass:
+Repomix's own **built-in default ignore patterns** already exclude `.log`
+files regardless of `--ignore`, so that test didn't actually exercise the
+passthrough. Second attempt reused one test directory for both the
+with/without-ignore runs, which let the first run's output XML leak into
+the second run's packaged input, corrupting the comparison. Fixed by using
+two isolated temp directories and a custom, non-default-excluded extension
+(`*.secretdata`).
+
+3. RESULTS - ALL PASS
+Part A - numbered output, real end-to-end:
+- Selected only `agents.md` (unchecked the other two). Real run against
+  `claude-haiku-4-5`. Exactly 1 Anthropic call made.
+- Output folder already had an `agents.md` (20187 bytes, from the batch-1
+  checkpoint). The new run correctly wrote `agents_2.md` (24060 bytes,
+  content reflects the current codebase through v1.11, ends on a complete
+  sentence - not truncated) instead of overwriting `agents.md`, which is
+  still present and unchanged. `bug_hunter.md`/`enhancement_agent.md`
+  untouched (not selected).
+- Final status correctly named the file: "Agent scaffolding complete!
+  (1 file: agents_2.md)".
+
+Part B - exclusion passthrough, real Repomix, isolated clean test:
+- Directory A (no `--ignore`): packaged both `keep.txt` and
+  `private.secretdata`; the sensitive marker string appears in the XML.
+- Directory B (`--ignore "*.secretdata"`, otherwise identical): packaged
+  only `keep.txt`; the sensitive marker is completely absent from the XML.
+- Confirms Repomix's `--ignore` flag works exactly as this app's
+  `exclude_patterns` passthrough (notes_014.txt) relies on, for a pattern
+  not covered by Repomix's own defaults.
+
+4. OUTCOME
+No bugs found. Both real-cost-relevant gaps flagged in notes_010.txt/
+notes_014.txt's follow-up sections are now closed with real evidence.
+Batch 2 (1.8-1.11) is fully live-verified. Per the agreed cadence, no
+separate bugfix release is needed; the next version number starts batch 3.
+
+5. NOT DONE (deliberately) / KNOWN GAPS
+- 1.9's timeout path (real 5-minute wait, real terminate/kill on a
+  genuinely hung Repomix process) was not re-tested live here - it was
+  already verified via an isolated non-Tk mechanism test in notes_013.txt,
+  and forcing a real 5-minute hang (or patching the constant down again,
+  which is what triggered the earlier hangs) wasn't worth repeating given
+  that verification already stands.
+- 1.11's Project Manager was not re-tested live here - already fully
+  verified live (zero cost, no hang) in notes_015.txt.
+- The exclusion-passthrough test proved Repomix's own flag behavior and
+  the app's command-construction logic separately, not a single unbroken
+  live run threading both together with a real paid Anthropic call. Given
+  both halves are independently solid, this composition gap is judged low
+  risk and not worth the added cost/hang-risk of forcing them together.
+
+6. FOLLOW-UP
+None identified. Batch 3 planning is a separate, later step.

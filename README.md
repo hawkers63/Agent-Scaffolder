@@ -6,9 +6,9 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?logo=windows&logoColor=white)](https://github.com/hawkers63/Agent-Scaffolder)
 [![CI](https://github.com/hawkers63/Agent-Scaffolder/actions/workflows/ci.yml/badge.svg)](https://github.com/hawkers63/Agent-Scaffolder/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-Proprietary%20%2F%20All%20Rights%20Reserved-red)](LICENSE)
-[![Release](https://img.shields.io/badge/Release-v1.7-success)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/Release-v1.11-success)](CHANGELOG.md)
 
-Version **1.7** — a Windows desktop utility that packages project source with Repomix and generates Markdown configuration documents for an AI assistant. It does **not** generate or run an autonomous Python agent.
+Version **1.11** — a Windows desktop utility that packages project source with Repomix and generates Markdown configuration documents for an AI assistant. It does **not** generate or run an autonomous Python agent.
 
 Built as a single-file CustomTkinter app using the Anthropic API. Pick a project, save your API key in Settings, choose a model, then **Generate Agents**.
 
@@ -18,12 +18,14 @@ Hand-writing agent instructions for every codebase is slow and drifts out of dat
 
 ## Key features
 
-- **Project shortcuts** — named paths in `projects.json`, plus **Other…** for any folder
+- **Project shortcuts** — named paths in `projects.json`, editable in-app via **Manage Projects...** (Settings) or by hand, plus **Other…** for any folder
+- **Optional per-project Repomix exclusion** — an `"exclude"` field passes patterns straight to Repomix's `--ignore`, on top of the target's own `.gitignore`
 - **Secure API key storage** — Windows Credential Manager via `keyring` (never JSON)
 - **In-app model picker** — Haiku 4.5, Sonnet 5 (default), or Opus 5, with optional env override
-- **Repomix packaging** — XML context of the target repo for generation
+- **Repomix packaging** — XML context of the target repo for generation, with a bounded timeout so a hung or oversized repo can't stall a run indefinitely
 - **Three agent documents, generate any subset** — `agents.md`, `bug_hunter.md`, `enhancement_agent.md`, each individually selectable so a re-run only pays for what you check
 - **Cancel button** — stops an in-flight run (terminates Repomix, skips any remaining API calls)
+- **Never overwrites past output** — a regeneration writes the next numbered file (`agents_2.md`, ...) instead of replacing a previous one
 - **Desktop output** — writes under `%USERPROFILE%\Desktop\Agent Outputs\<project>` and opens Explorer on success
 - **Reliable worker** — UI snapshots, staged writes (all-or-nothing), unique temp XML, clear status messages, busy cursor and close-during-job confirmation
 - **One-click launcher** — `Run-Agent-Scaffolder.bat` with `py -3.11` / `python` fallback
@@ -32,11 +34,11 @@ Hand-writing agent instructions for every codebase is slow and drifts out of dat
 
 | | |
 | --- | --- |
-| **Current** | **[v1.7](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.7)** (2026-09-11) |
-| **App version** | `APP_VERSION = "1.7"` in `agent_scaffolder.py` |
-| **Highlights** | Job-running guard, busy cursor, close-during-job confirmation; Cancel button; status/Settings copy pass; docs alignment; per-file regeneration (generate any subset of the three files instead of always all three). Live-verified against real Repomix + Anthropic calls — see `notes/notes_011.txt`. |
+| **Current** | **[v1.11](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.11)** (2026-09-11) |
+| **App version** | `APP_VERSION = "1.11"` in `agent_scaffolder.py` |
+| **Highlights** | Numbered output instead of overwrite (`agents_2.md`, ...); bounded Repomix subprocess timeout; optional per-project Repomix exclusion passthrough; in-app Project Manager (add/edit/remove `projects.json` shortcuts from Settings). Live-verified against real Repomix + Anthropic calls — see `notes/notes_016.txt`. |
 | **Changelog** | Full notes in [CHANGELOG.md](CHANGELOG.md) |
-| **Tags** | [`v1.7`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.7) · [`v1.6`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.6) · [`v1.5`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.5) · [`v1.4`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.4) · [`v1.3`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.3) · [`v1.2`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.2) · [`v1.1`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.1) · [`v1.0`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.0) |
+| **Tags** | [`v1.11`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.11) · [`v1.10`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.10) · [`v1.9`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.9) · [`v1.8`](https://github.com/hawkers63/Agent-Scaffolder/releases/tag/v1.8) · [full history](https://github.com/hawkers63/Agent-Scaffolder/tags) |
 
 
 > Maintainers: when you cut a release, bump `APP_VERSION`, update this **Release** table, add a CHANGELOG entry, and tag (`vX.Y`). Prefer creating a matching GitHub Release so the badges and links stay honest.

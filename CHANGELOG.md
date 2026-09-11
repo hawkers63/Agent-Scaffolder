@@ -18,8 +18,16 @@ Batch-2 feature work, fourth and final release (see `notes/notes_015.txt`).
   currently active target directory selected by path (so a rename follows
   it) rather than resetting to whatever was last saved on disk.
 
-This closes out batch 2 (1.8-1.11). Live-test checkpoint next, covering
-everything in this batch with real Repomix + Anthropic calls.
+This closes out batch 2 (1.8-1.11).
+
+**Live-test checkpoint (2026-09-11, see `notes/notes_016.txt`): all pass, no
+bugs found.** Numbered output confirmed end-to-end with a real Anthropic
+call: an existing `agents.md` was correctly left untouched and a new
+`agents_2.md` written instead. Exclusion passthrough confirmed against the
+real Repomix binary: a custom pattern (`--ignore "*.secretdata"`) correctly
+excluded a matching file's content from the packaged output, while an
+identical run without it included it. No fix release needed — batch 3
+starts fresh at the next version.
 
 ## 1.10 — 2026-09-11
 

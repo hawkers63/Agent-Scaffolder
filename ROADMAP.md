@@ -23,10 +23,12 @@ during verification (unrelated to the app's own correctness — see
 isolated non-GUI tests instead, and a firm rule is now recorded in
 MEMORY.md ("don't monkeypatch `subprocess.Popen` while driving a live
 `app.mainloop()` with a background thread"). **Batch 2's live-test
-checkpoint (real Repomix + Anthropic calls, no Popen patching) is next,
-before batch 3 begins.** If a checkpoint finds bugs, that fix work should
-occupy the next version number before the following batch's code-only
-releases begin.
+checkpoint ran 2026-09-11** (`notes/notes_016.txt`): real end-to-end
+confirmation that numbered output leaves an existing file alone and writes
+a new numbered one, and that Repomix's `--ignore` flag genuinely excludes
+matching content — **no bugs found**. Batch 3 starts fresh at the next
+version. If a checkpoint finds bugs, that fix work should occupy the next
+version number before the following batch's code-only releases begin.
 
 ## v1.1 — Correctness & reliability (shipped)
 Both audits agree these are the changes that make current behaviour honest, before any
@@ -129,7 +131,8 @@ memory and only hit disk after all three requests succeed, which resolves the re
       in Settings; add/edit/remove with validation, including the 1.10 `exclude`
       field; closing it refreshes the main dropdown, keeping the active target
       selected by path through a rename. See `notes/notes_015.txt`. **Closes out
-      batch 2 (1.8-1.11)** — live-test checkpoint next.
+      batch 2 (1.8-1.11).** Live-test checkpoint run 2026-09-11
+      (`notes/notes_016.txt`): all pass, no bugs found.
 - [x] Regenerate a single output file instead of always running all three.
       **Shipped in 1.7** (2026-09-11): "Files to generate:" checkboxes
       (`agents.md` / `bug_hunter.md` / `enhancement_agent.md`, all checked by

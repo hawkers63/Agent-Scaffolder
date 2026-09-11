@@ -20,9 +20,9 @@ itself (see `CONTRIBUTING.md`).
 
 ## Current version
 **1.11** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
-**Batch 2 (1.8-1.11) complete**; verified by source review + `py_compile` +
-targeted isolated/zero-cost tests only. Live-test checkpoint (real
-Repomix/Anthropic calls) is the next thing to do, before batch 3 starts.
+**Batch 2 (1.8-1.11) complete and live-verified** (real Repomix + Anthropic
+calls, 2026-09-11, `notes/notes_016.txt`) — no bugs found. Tags exist through
+`v1.11`, pushed 2026-09-11 per explicit request ("Go ahead").
 1.3-1.7 (batch 1) were live-verified together on 2026-09-11 (`notes/notes_011.txt`)
 - no bugs found. 1.0/1.1/1.2 were each live-verified individually
 (`notes/notes_004.txt`, `notes/notes_005.txt`). Tags exist through `v1.7`, pushed
@@ -348,6 +348,22 @@ design. Don't reintroduce them under a "polish" pass without confirming it's wan
   full CRUD + validation + main-window-refresh all passed cleanly on the
   first attempt, which also supports the Popen-patching hang theory from
   1.9/1.10. See `notes/notes_015.txt`. **This closes out batch 2
-  (1.8-1.11).** Next: the batch-2 live-test checkpoint (real Repomix +
-  Anthropic calls, no Popen patching) before batch 3 begins - per the
-  agreed cadence, don't skip it.
+  (1.8-1.11).**
+- 2026-09-11: Ran the batch-2 live-test checkpoint (user-authorized: "That's
+  terrific work. Go ahead."). Part A (numbered output, real end-to-end):
+  drove the real app via `app.mainloop()` + `app.after(...)`, no Popen
+  patching - real Repomix, real Haiku-4.5 call, against this repo's own
+  output folder which already had a pre-1.8 `agents.md`. Confirmed: 1 real
+  API call, `agents_2.md` written (not overwriting `agents.md`), status
+  named the file correctly. Part B (exclusion passthrough): tested the real
+  `repomix` binary directly (no app code) with an isolated custom-extension
+  pattern (`*.secretdata`, not covered by Repomix's own defaults) across two
+  separate clean directories - confirmed `--ignore` genuinely excludes
+  matching content. First two attempts at Part B were flawed (`*.log` is
+  already excluded by Repomix's own built-in defaults regardless of
+  `--ignore`, so that "passed" without proving anything; then reusing one
+  directory for both runs let the first run's output XML leak into the
+  second run's input) - fixed by using isolated dirs and a non-default
+  extension. **No bugs found.** Pushed and tagged `v1.8`-`v1.11` to `origin`
+  per the same authorization; README Release table updated to v1.11 in the
+  same commit. See `notes/notes_016.txt`.
