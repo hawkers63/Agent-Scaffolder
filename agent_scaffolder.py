@@ -17,7 +17,7 @@ import anthropic
 import keyring
 from tkinter import filedialog, messagebox
 
-APP_VERSION = "1.6"
+APP_VERSION = "1.7"
 
 # Credential Manager service for Anthropic API key (never store keys in files)
 SERVICE_NAME = "AgentScaffolderApp"
@@ -312,6 +312,19 @@ class ScaffoldingApp(ctk.CTk):
         )
         self.path_label.pack(padx=24, pady=(0, 8))
 
+        self.files_label = ctk.CTkLabel(self, text="Files to generate:")
+        self.files_label.pack(anchor="w", padx=24)
+
+        self.file_row = ctk.CTkFrame(self, fg_color="transparent")
+        self.file_row.pack(padx=24, pady=(4, 8), anchor="w")
+
+        self.file_checks = {}
+        for fname in ("agents.md", "bug_hunter.md", "enhancement_agent.md"):
+            cb = ctk.CTkCheckBox(self.file_row, text=fname, command=self.refresh_ui_state)
+            cb.select()
+            cb.pack(side="left", padx=(0, 12))
+            self.file_checks[fname] = cb
+
         self.status_label = ctk.CTkLabel(
             self, text="Ready", text_color="gray", wraplength=460, justify="left"
         )
@@ -442,10 +455,14 @@ class ScaffoldingApp(ctk.CTk):
     def project_path_valid(self):
         return bool(self.target_dir and os.path.isdir(self.target_dir))
 
+    def _selected_agent_files(self):
+        return [name for name, cb in self.file_checks.items() if cb.get()]
+
     def refresh_ui_state(self, update_status_text=True):
         key_ok = self.has_api_key()
         path_ok = self.project_path_valid()
-        if key_ok and path_ok:
+        files_ok = bool(self._selected_agent_files())
+        if key_ok and path_ok and files_ok:
             self.generate_btn.configure(state="normal")
             if update_status_text:
                 self.status_label.configure(text="Ready to generate")
@@ -453,10 +470,14 @@ class ScaffoldingApp(ctk.CTk):
             self.generate_btn.configure(state="disabled")
             if update_status_text:
                 self.status_label.configure(text="API key required — set it in Settings")
-        else:
+        elif not path_ok:
             self.generate_btn.configure(state="disabled")
             if update_status_text:
                 self.status_label.configure(text="Select a valid project directory")
+        else:
+            self.generate_btn.configure(state="disabled")
+            if update_status_text:
+                self.status_label.configure(text="Select at least one file to generate")
 
     def first_run_check(self):
         if not self.has_api_key():
@@ -479,8 +500,12 @@ class ScaffoldingApp(ctk.CTk):
         if not self.project_path_valid():
             self.status_label.configure(text="Select a valid project directory")
             return
+        selected_files = self._selected_agent_files()
+        if not selected_files:
+            self.status_label.configure(text="Select at least one file to generate")
+            return
         # Snapshot the selection on the UI thread; the worker never touches
-        # target_dir or project_menu again once it starts.
+        # target_dir, project_menu, or the file checkboxes again once it starts.
         target_dir = self.target_dir
         output_dir = self._output_folder_for_selection()
         self._job_running = True
@@ -489,10 +514,14 @@ class ScaffoldingApp(ctk.CTk):
         self.generate_btn.configure(state="disabled")
         self.settings_btn.configure(state="disabled")
         self.project_menu.configure(state="disabled")
+        for cb in self.file_checks.values():
+            cb.configure(state="disabled")
         self.cancel_btn.configure(state="normal")
         self.update_status("Packaging codebase with Repomix...")
         threading.Thread(
-            target=self.run_scaffolding, args=(target_dir, output_dir), daemon=True
+            target=self.run_scaffolding,
+            args=(target_dir, output_dir, selected_files),
+            daemon=True,
         ).start()
 
     def cancel_generation(self):
@@ -550,7 +579,7 @@ class ScaffoldingApp(ctk.CTk):
             env["PATH"] = os.pathsep.join(path_parts) + os.pathsep + env.get("PATH", "")
         return env
 
-    def run_scaffolding(self, target_dir, output_dir):
+    def run_scaffolding(self, target_dir, output_dir, selected_files):
         # Unique per-run temp XML under APP_DIR so concurrent instances don't collide,
         # and everything below (including the keyring read) sits inside one
         # try/finally so any failure still re-enables the UI.
@@ -619,10 +648,11 @@ class ScaffoldingApp(ctk.CTk):
                     ),
                 },
             ]
+            agents = [a for a in agents if a["name"] in selected_files]
 
-            # Stage all three responses in memory first. Nothing on disk is touched
-            # until every request has succeeded, so a failure partway through
-            # leaves the previous output files exactly as they were.
+            # Stage the selected responses in memory first. Nothing on disk is
+            # touched until every requested file has succeeded, so a failure
+            # partway through leaves the previous output files exactly as they were.
             generated = {}
             for agent in agents:
                 if self._cancel_requested:
@@ -665,7 +695,9 @@ class ScaffoldingApp(ctk.CTk):
                 with open(out_path, "w", encoding="utf-8") as out_file:
                     out_file.write(text)
 
-            done_msg = f"Agent scaffolding complete!\nOutput: {output_dir}"
+            count = len(generated)
+            file_word = "file" if count == 1 else "files"
+            done_msg = f"Agent scaffolding complete! ({count} {file_word})\nOutput: {output_dir}"
             self.update_status(done_msg)
             self.after(0, lambda d=output_dir: self._open_output_folder(d))
 
@@ -696,6 +728,8 @@ class ScaffoldingApp(ctk.CTk):
         self.configure(cursor="")
         self.settings_btn.configure(state="normal")
         self.project_menu.configure(state="normal")
+        for cb in self.file_checks.values():
+            cb.configure(state="normal")
         self.cancel_btn.configure(state="disabled")
         # Restore button enablement without clobbering the success/error text
         # the job just posted; the next user action refreshes it normally.

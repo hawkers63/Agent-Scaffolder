@@ -1,0 +1,86 @@
+AGENT SCAFFOLDER — REGENERATE A SINGLE FILE
+Date: 11 September 2026
+Report: notes_010.txt
+Predecessor: notes_009.txt (v1.6 docs alignment)
+Author role: Feature development and UI/UX specialist
+
+1. PURPOSE
+Ship the ROADMAP v1.3 item "Regenerate a single output file instead of
+always running all three." Fifth and final release of the batch-1 testing
+cadence (1.3-1.7 code-only; 1.8 is the reserved live-test/fix checkpoint).
+This item was specifically pulled forward from the v1.3 "needs a product
+decision" bucket per the user's explicit choice this session (finish v1.2,
+then pull from v1.3 to round the batch out to five) - it was picked over the
+other v1.3 candidates (project manager, subprocess timeout, exclusion
+passthrough) because it directly reduces per-run Anthropic cost, which lines
+up with the cost concern that motivated the whole batched-testing cadence.
+
+2. CHANGES
+- agent_scaffolder.py: added a "Files to generate:" label and a row of three
+  `CTkCheckBox` widgets (`agents.md`, `bug_hunter.md`, `enhancement_agent.md`),
+  packed left-to-right inside a transparent `CTkFrame` (still `pack()`-only
+  layout - `side="left"` inside one frame, no grid/place). All three start
+  checked (`.select()`), matching the previous always-generate-all-three
+  default exactly, so existing behaviour is unchanged unless the user
+  unchecks something.
+- `self.file_checks`: dict of {filename: CTkCheckBox}, no external Tk
+  BooleanVar created (state is read via `.get()`, consistent with how
+  `project_menu.get()` is used elsewhere - preserves the "no Tk
+  StringVar/BooleanVar" architecture invariant).
+- New `_selected_agent_files()` helper returns the list of checked filenames.
+- `refresh_ui_state()` extended (not parallel logic - per the "single source
+  of truth" invariant) with a `files_ok` check; Generate is disabled with
+  "Select at least one file to generate" if nothing is checked. Each
+  checkbox's `command` calls `refresh_ui_state` so toggling updates the
+  button/status immediately.
+- `start_generation()`: reads `_selected_agent_files()`, bails out with the
+  same "select at least one" status if empty (defensive - button is already
+  disabled in that state), snapshots the selection before the worker starts
+  (same UI-thread-snapshot pattern as `target_dir`/`output_dir`), disables
+  all three checkboxes for the duration of the job, and passes the selection
+  into the worker thread as a new `selected_files` argument.
+- `run_scaffolding(self, target_dir, output_dir, selected_files)`: filters
+  the existing three-entry `agents` list down to
+  `[a for a in agents if a["name"] in selected_files]` right after it's
+  built - one line, no restructuring of the prompt/role definitions.
+  Repomix still always runs (it's the shared packaged-context input for
+  whichever files are requested); only the Anthropic calls are skipped for
+  unselected files, which is where the actual cost lives.
+- `reset_buttons()`: re-enables all three checkboxes alongside the existing
+  settings/project-menu/cancel-button resets.
+- Completion message now reads "Agent scaffolding complete! (N file(s))"
+  instead of always implying three, since N can now be 1-3.
+- APP_VERSION bumped to 1.7. CHANGELOG.md and ROADMAP.md updated. This
+  closes out batch-1 (1.3-1.7) entirely.
+
+3. VERIFICATION
+PASS: `python -m py_compile agent_scaffolder.py`.
+PASS: `python -c "import customtkinter as ctk; ... hasattr(ctk,
+'CTkCheckBox')"` confirmed `CTkCheckBox` exists on the installed
+customtkinter 5.2.2 (the same version already live-verified in
+notes_004.txt/notes_005.txt), so this isn't introducing an API that doesn't
+exist in the pinned dependency.
+PASS: Source review of the full generation path - confirmed the
+`_cancel_requested` checkpoints added in 1.4 still fire correctly against
+the filtered `agents` list (they check before each remaining item, so
+cancelling with e.g. only `enhancement_agent.md` selected still works);
+confirmed `reset_buttons` re-enables every widget disabled in
+`start_generation` including the new checkboxes; confirmed default state
+(all three checked) reproduces the pre-1.7 always-generate-all-three
+behaviour exactly.
+NOT DONE (deliberately, per the batched testing cadence - this is the last
+code-only release before the checkpoint): a live pass that unchecks a file,
+runs a real generation, and confirms only the selected file(s) are written
+and only that many Anthropic calls are actually made (billing-visible cost
+reduction, not just code-path skipping). This is the single most important
+thing to confirm live at the 1.8 checkpoint, since it's the feature most
+directly tied to the cost problem that started this cadence.
+
+4. FOLLOW-UP
+1.8 (live-test checkpoint) should specifically verify: (a) unchecking files
+actually reduces the number of Anthropic requests made (not just files
+written), (b) the wait cursor and Cancel button both behave correctly with
+a partial selection, (c) the close-during-job dialog and its Cancel-button
+mention read correctly, and (d) the Settings heading/env-override copy from
+1.5 renders as expected. If any of these regressed, 1.8 also fixes them
+per the agreed cadence (5 code-only releases + 1 test-and-fix release).

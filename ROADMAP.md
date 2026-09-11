@@ -111,7 +111,12 @@ memory and only hit disk after all three requests succeed, which resolves the re
 ## v1.3 — Feature expansion (needs a product decision first — see "Later" below)
 - [ ] Lightweight in-app project manager (add/edit/remove `projects.json` entries) as
       its own compact `CTkToplevel`, following the existing load/save JSON pattern.
-- [ ] Regenerate a single output file instead of always running all three.
+- [x] Regenerate a single output file instead of always running all three.
+      **Shipped in 1.7** (2026-09-11): "Files to generate:" checkboxes
+      (`agents.md` / `bug_hunter.md` / `enhancement_agent.md`, all checked by
+      default) filter which files trigger an Anthropic call; Repomix still
+      packages once regardless (shared input). See `notes/notes_010.txt`.
+      Closes out batch-1 (1.3-1.7); 1.8 is the reserved live-test checkpoint.
 - [x] Cancel button for an in-flight generation (join/kill the subprocess only).
       **Shipped in 1.4** (2026-09-11): Repomix now runs via `Popen` so Cancel can
       terminate it, plus a cancellation checkpoint before each Anthropic call and

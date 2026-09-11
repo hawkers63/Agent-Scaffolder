@@ -4,6 +4,26 @@
 
 Nothing yet.
 
+## 1.7 — 2026-09-11
+
+Batch-1 feature work, final release of this batch (see `notes/notes_010.txt`).
+
+- **Regenerate a single file (or any subset)** instead of always running all
+  three: a "Files to generate:" row of checkboxes (`agents.md`,
+  `bug_hunter.md`, `enhancement_agent.md`, all checked by default) lets you
+  pick which files to generate. Repomix still packages the repo once
+  regardless of selection (it's the shared input), but only the checked
+  files trigger an Anthropic call — directly cuts per-run API cost when you
+  only need to redo one file. Generate is disabled with a
+  "Select at least one file to generate" status if nothing is checked; the
+  completion message now states how many files were generated.
+- Checkboxes lock (disabled) for the duration of a run, alongside the
+  existing project/Settings locks, and unlock in `reset_buttons`.
+
+This closes out the batch adopted 2026-09-11 (1.3-1.7). Per the agreed
+cadence, 1.8 is reserved for a live end-to-end test pass covering everything
+in this batch, plus fixes for whatever it finds.
+
 ## 1.6 — 2026-09-11
 
 Batch-1 docs alignment (see `notes/notes_009.txt`).
