@@ -4,6 +4,31 @@
 
 Nothing yet.
 
+## 1.13 — 2026-09-11
+
+First real distributable build, plus a real bug it surfaced (see
+`notes/notes_018.txt`).
+
+- **PyInstaller packaging.** New `build-exe.ps1` produces a standalone
+  `dist\Agent Scaffolder.exe` (`--onefile --windowed`, real icon,
+  `pyinstaller-hooks-contrib`'s CustomTkinter hook, `keyring` Windows
+  backend hidden-import). New `requirements-build.txt` for the build-time
+  dependency. Does not bundle Node.js/Repomix — see 1.12 and ROADMAP.md.
+- **Fixed a real persistence bug for frozen builds:** `APP_DIR` is now
+  `os.path.dirname(sys.executable)` when running as a frozen `.exe`
+  (instead of resolving inside PyInstaller's temporary per-launch
+  extraction directory, which would have silently discarded every
+  persisted setting on each relaunch). A new `RESOURCE_DIR` still points
+  at the bundled temp location for the read-only icon. No change when
+  running from source.
+- **Fixed a real, pre-existing layout bug**, found via an actual
+  screenshot of the running exe (every check before this used widget-state
+  assertions, which don't catch clipping): the main window's fixed
+  `520x340` size predated the Cancel button (1.4) and file-selection
+  checkboxes (1.7), and was clipping the Settings button out of the
+  visible window entirely. Now `520x480`. Affects the source-run app too,
+  not just the frozen build.
+
 ## 1.12 — 2026-09-11
 
 First step toward a distributable build (see `notes/notes_017.txt`).

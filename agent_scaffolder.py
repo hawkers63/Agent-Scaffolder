@@ -10,6 +10,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 import threading
 import uuid
 import customtkinter as ctk
@@ -17,13 +18,27 @@ import anthropic
 import keyring
 from tkinter import filedialog, messagebox
 
-APP_VERSION = "1.12"
+APP_VERSION = "1.13"
 
 # Credential Manager service for Anthropic API key (never store keys in files)
 SERVICE_NAME = "AgentScaffolderApp"
 ACCOUNT_NAME = "AnthropicAPIKey"
 
-APP_DIR = os.path.dirname(os.path.abspath(__file__))
+# APP_DIR holds persistent local state (projects.json, last_project.json,
+# model_choice.json, temp Repomix XML) and must be a stable location next to
+# the real executable/script. RESOURCE_DIR holds bundled read-only assets
+# (the icon). These are the same directory when running from source, but
+# differ for a PyInstaller --onefile build: __file__ there resolves inside
+# the temporary per-launch extraction directory (sys._MEIPASS), which is
+# fine for read-only bundled resources but would silently discard all
+# persisted settings on every relaunch if used for APP_DIR too.
+if getattr(sys, "frozen", False):
+    APP_DIR = os.path.dirname(sys.executable)
+    RESOURCE_DIR = getattr(sys, "_MEIPASS", APP_DIR)
+else:
+    APP_DIR = os.path.dirname(os.path.abspath(__file__))
+    RESOURCE_DIR = APP_DIR
+
 PROJECTS_FILE = os.path.join(APP_DIR, "projects.json")
 LAST_PROJECT_FILE = os.path.join(APP_DIR, "last_project.json")
 MODEL_CHOICE_FILE = os.path.join(APP_DIR, "model_choice.json")
@@ -230,7 +245,7 @@ class SettingsWindow(ctk.CTkToplevel):
         self.title("Settings")
         self.geometry("400x440")
         self.grab_set()
-        icon_path = os.path.join(APP_DIR, "icon", "Agent.Scaffolder.ico")
+        icon_path = os.path.join(RESOURCE_DIR, "icon", "Agent.Scaffolder.ico")
         if os.path.isfile(icon_path):
             try:
                 self.iconbitmap(icon_path)
@@ -341,7 +356,7 @@ class ProjectManagerWindow(ctk.CTkToplevel):
         self.geometry("460x520")
         self.grab_set()
         self.protocol("WM_DELETE_WINDOW", self._on_close)
-        icon_path = os.path.join(APP_DIR, "icon", "Agent.Scaffolder.ico")
+        icon_path = os.path.join(RESOURCE_DIR, "icon", "Agent.Scaffolder.ico")
         if os.path.isfile(icon_path):
             try:
                 self.iconbitmap(icon_path)
@@ -490,7 +505,7 @@ class ScaffoldingApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title(f"Agent Scaffolder v{APP_VERSION}")
-        self.geometry("520x340")
+        self.geometry("520x480")
         self._apply_window_icon()
 
         self.projects = load_projects()
@@ -567,7 +582,7 @@ class ScaffoldingApp(ctk.CTk):
 
     def _apply_window_icon(self):
         """Set the Windows title-bar / taskbar icon from icon/Agent.Scaffolder.ico."""
-        icon_path = os.path.join(APP_DIR, "icon", "Agent.Scaffolder.ico")
+        icon_path = os.path.join(RESOURCE_DIR, "icon", "Agent.Scaffolder.ico")
         if not os.path.isfile(icon_path):
             return
         try:

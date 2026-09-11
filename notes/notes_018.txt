@@ -1,0 +1,120 @@
+AGENT SCAFFOLDER — FIRST DISTRIBUTABLE BUILD (PyInstaller) + MAIN WINDOW LAYOUT FIX
+Date: 11 September 2026
+Report: notes_018.txt
+Predecessor: notes_017.txt (v1.12 Repomix/Node.js missing error)
+Author role: Feature development and UI/UX specialist
+
+1. PURPOSE
+Second step of the "Distributable build" track: set up the actual
+PyInstaller packaging, produce a real .exe, and smoke-test it. Per the
+decision recorded in ROADMAP.md/MEMORY.md, this does NOT bundle Node.js/
+Repomix — pre-flight detection (1.12) plus clear guidance covers that.
+
+2. CHANGES — packaging
+- New `build-exe.ps1`: runs PyInstaller with `--onefile --windowed
+  --icon icon\Agent.Scaffolder.ico --add-data icon\Agent.Scaffolder.ico;icon
+  --collect-all keyring --hidden-import keyring.backends.Windows`.
+  `pyinstaller-hooks-contrib` (already installed) supplies a
+  `hook-customtkinter.py` that handles CustomTkinter's asset/theme bundling
+  automatically — no manual `--add-data` needed for that, confirming the
+  PyInstaller-over-Nuitka recommendation from the earlier discussion.
+- New `requirements-build.txt` (`pyinstaller`, `pyinstaller-hooks-contrib`)
+  — build-time only, separate from `requirements-scaffolder.txt` (running
+  the app from source needs neither).
+- `.gitignore`: added `*.spec` (PyInstaller's generated spec file; `build/`
+  and `dist/` were already ignored).
+
+3. CHANGES — a real bug found and fixed via this work
+- agent_scaffolder.py: split `APP_DIR` (persistent local state - projects/
+  last_project/model_choice.json, temp Repomix XML) from a new
+  `RESOURCE_DIR` (bundled read-only assets - the icon). When frozen
+  (`sys.frozen`), `__file__`-based paths resolve inside PyInstaller's
+  per-launch temporary extraction directory (`sys._MEIPASS`) - fine for
+  read-only assets, but would have silently discarded every persisted
+  setting on each relaunch if used for `APP_DIR` too. Fixed:
+  `APP_DIR = os.path.dirname(sys.executable)` when frozen (stable,
+  persistent), `RESOURCE_DIR = sys._MEIPASS` when frozen (correct for
+  bundled data). Identical to the existing behaviour when not frozen (both
+  equal the script's directory) - zero change to running from source.
+  The three `icon_path = os.path.join(APP_DIR, ...)` lookups (Settings,
+  ProjectManager, main window) now use `RESOURCE_DIR`.
+- **Separately, a real pre-existing layout bug**, only found because this
+  work finally involved a real screenshot of the running main window
+  (every verification this whole session before now used `.cget()` widget-
+  state assertions, which prove a widget exists and has certain properties
+  but never prove it's actually visible within the window's bounds): the
+  main `ScaffoldingApp` window's `self.geometry("520x340")` was never
+  updated despite the Cancel button (v1.4) and the file-selection
+  checkboxes row (v1.7) adding real vertical content on top of the
+  original v1.0-era layout. The Settings button was being clipped
+  entirely out of the visible window - confirmed via a real screenshot of
+  the built exe (see section 4). Fixed: `self.geometry("520x480")`.
+  This bug affected the source-run app too, not just the frozen build -
+  it just took an actual visual check to surface it.
+- APP_VERSION bumped to 1.13. CHANGELOG.md and ROADMAP.md updated.
+
+4. VERIFICATION - real build, real screenshots, real isolated test
+- `python -m py_compile agent_scaffolder.py`: PASS, both before and after
+  the geometry fix.
+- Ran `build-exe.ps1` for real: produced `dist\Agent Scaffolder.exe`
+  (~40MB). Warnings noted and judged benign: `Hidden import "tzdata" not
+  found` (optional IANA timezone data package, pulled in transitively by
+  an HTTP dependency; not exercised by this app's own code) and an
+  `AppKit.framework` ctypes-import warning from `darkdetect` (a
+  CustomTkinter dependency for OS theme detection; Windows-only build, the
+  macOS-specific code path is simply unused here).
+- **First smoke test** (before the geometry fix was known): copied the
+  exe to a fully isolated temp directory with nothing else in it (no
+  source tree nearby, to genuinely simulate a distributed environment).
+  Launched it for real: process started, became responsive, window title
+  read "Agent Scaffolder v1.12" (confirms the frozen build correctly
+  reflects the current source). **Critically, `projects.json` was created
+  next to the exe** (not lost in the temp extraction directory) -
+  confirms the `APP_DIR`/`RESOURCE_DIR` fix works for real, not just in
+  theory. Content matched the expected `DEFAULT_PROJECTS` seed exactly.
+  A real screenshot (System.Drawing screen capture, then viewed directly -
+  no click automation involved, so none of this session's earlier
+  GUI-automation hang risk applied) is what caught the Settings-button
+  clipping bug.
+- Fixed the geometry, verified the fix quickly by running the app from
+  source (`python agent_scaffolder.py`) and re-screenshotting - confirmed
+  Settings button now fully visible with correct spacing - before paying
+  the ~2-3 minute cost of a full rebuild to confirm the same fix in the
+  actual frozen exe.
+- **Second smoke test**, fresh isolated copy of the rebuilt exe: window
+  title "Agent Scaffolder v1.12" (this screenshot was taken against the
+  pre-1.13-bump build; a final rebuild after the version bump was done
+  but not re-screenshotted - the version string itself was never in
+  question, only the layout and persistence behaviour, both already
+  confirmed twice over). Settings button fully visible, correct icon in
+  the title bar, checkboxes and dropdown all rendered correctly.
+  Cleaned up: killed the test process, removed the isolated test
+  directory, confirmed no stray processes and no changes to this
+  session's real `projects.json`/`last_project.json`/`model_choice.json`.
+
+5. NOT DONE (deliberately) / KNOWN GAPS
+- No real end-to-end generation (real Repomix + real Anthropic call) was
+  run against the built exe - the smoke test confirmed launch, config
+  persistence, and layout, which are the packaging-specific risks; the
+  generation logic itself is unchanged from the already-live-verified
+  source version and doesn't behave differently when frozen.
+- No code signing. An unsigned .exe from a new publisher will trigger
+  Windows SmartScreen warnings on a machine other than this one - flagged
+  in the original discussion, not addressed here (costs money for a
+  cert; a separate decision).
+- No CI/release-automation workflow to build and attach the .exe to a
+  GitHub Release on tag push - listed in ROADMAP.md's "Distributable
+  build" section as an explicit, not-yet-started follow-up.
+- README doesn't yet document the new `.exe`/build-from-source path for
+  end users - also queued as a ROADMAP follow-up.
+- `dist\Agent Scaffolder.exe` is a local build artifact only (gitignored,
+  as it should be) - it has not been distributed, uploaded, or attached
+  anywhere. Distributing it (e.g., to another machine or as a release
+  asset) is a separate, later action.
+
+6. FOLLOW-UP
+Per user request, work paused here for the session - remaining
+"Distributable build" checklist items (README docs, optional CI release
+workflow) are queued in ROADMAP.md for a future session. This work was
+not pushed to origin this round (commit only, per the standing "commit
+is automatic, push needs an explicit ask" pattern) - see MEMORY.md.

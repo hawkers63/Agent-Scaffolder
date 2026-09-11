@@ -177,12 +177,29 @@ out to be a real adoption blocker.
       `node`/`npx` and `repomix` are findable on PATH when Repomix fails,
       and shows actionable install guidance instead of "Command 'repomix'
       returned non-zero exit status 1." See `notes/notes_017.txt`.
-- [ ] PyInstaller build config: `--windowed`, `--icon=icon/Agent.Scaffolder.ico`,
-      CustomTkinter asset bundling (`--add-data`), `keyring` Windows backend
-      hidden-import. Produce a real `.exe` and smoke-test it launches and
-      generates correctly on this machine.
+- [x] PyInstaller build config. **Shipped in 1.13** (2026-09-11): new
+      `build-exe.ps1` + `requirements-build.txt`. `pyinstaller-hooks-contrib`
+      already supplies a CustomTkinter hook (no manual asset `--add-data`
+      needed); `keyring`'s Windows backend needed an explicit hidden-import.
+      Built and smoke-tested a real `dist\Agent Scaffolder.exe` in a fully
+      isolated temp directory (no source tree nearby) - launch, config
+      persistence, and layout all confirmed via real screenshots. Surfaced
+      and fixed two real bugs along the way: a frozen-build persistence bug
+      (`APP_DIR` was resolving inside PyInstaller's temp extraction dir,
+      which would have discarded every setting on each relaunch — new
+      `RESOURCE_DIR` split fixes it) and a pre-existing main-window layout
+      bug (fixed geometry never grew to fit the Cancel button + checkboxes
+      added since 1.4/1.7, clipping the Settings button out of view
+      entirely — affects source-run too). See `notes/notes_018.txt`.
+      Not yet done: an end-to-end real generation through the built exe
+      (launch/persistence/layout were the packaging-specific risks; the
+      generation logic itself is unchanged from the already-verified
+      source version).
 - [ ] README "Download" / build-from-source docs reflecting the new `.exe`
       path alongside the existing checkout-and-run instructions.
+- [ ] Code signing for the `.exe` (unsigned triggers Windows SmartScreen on
+      another machine) — costs money for a cert; a separate decision, not
+      started.
 - [ ] Later, optional: a GitHub Actions release workflow that builds and
       attaches the `.exe` to a GitHub Release on tag push (ties into the
       existing README maintainer note "prefer creating a matching GitHub

@@ -19,11 +19,13 @@ and are now the dev-instructions the maintainer follows when working on the tool
 itself (see `CONTRIBUTING.md`).
 
 ## Current version
-**1.12** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
+**1.13** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
 Batch 2 (1.8-1.11) complete and live-verified (real Repomix + Anthropic calls,
-2026-09-11, `notes/notes_016.txt`) — no bugs found. Tags exist through `v1.11`,
-pushed 2026-09-11. 1.12 starts a new "Distributable build" track (see
-ROADMAP.md) - not committed/tagged/pushed yet this round.
+2026-09-11, `notes/notes_016.txt`) — no bugs found. Tags exist through `v1.11`
+(pushed 2026-09-11). **1.12-1.13 (Distributable build track) are committed
+but not pushed/tagged** — session paused here at the user's request ("Finish
+off the commit and we'll wrap up for tonight. Pick it up again tomorrow.").
+Push/tag `v1.12`/`v1.13` next session when asked.
 1.3-1.7 (batch 1) were live-verified together on 2026-09-11 (`notes/notes_011.txt`)
 - no bugs found. 1.0/1.1/1.2 were each live-verified individually
 (`notes/notes_004.txt`, `notes/notes_005.txt`). Tags exist through `v1.7`, pushed
@@ -99,6 +101,13 @@ fourth time without a documented reason to retry. See `notes/notes_014.txt`.
   agent files to generate; read via `.get()`, not an external Tk BooleanVar, per the
   no-Tk-variable-bindings rule. Any new per-file toggle should extend this dict
   rather than adding separate widgets/state (added 1.7).
+- `APP_DIR` (persistent local state: projects/last_project/model_choice.json, temp
+  Repomix XML) vs `RESOURCE_DIR` (bundled read-only assets: the icon) — added 1.13
+  for the PyInstaller build. Identical when running from source; when frozen,
+  `APP_DIR` = next to the real `.exe`, `RESOURCE_DIR` = PyInstaller's temp
+  extraction dir. Any new persistent file must use `APP_DIR`, any new bundled
+  read-only asset must use `RESOURCE_DIR` — using the wrong one either loses
+  settings on every relaunch of the frozen build, or fails to find the asset.
 - Output contract: `Desktop/Agent Outputs/<project>` — do not relocate without being asked.
   Since 1.8, files there are never overwritten: first generation keeps the plain
   filename, later ones get the next free `_N` suffix per file (`_next_available_path`).
@@ -163,10 +172,17 @@ missing, rather than bundling a full Node runtime (bigger/more complex/
 another thing to keep in sync). Full checklist and status: ROADMAP.md
 "Distributable build" section. First step shipped in 1.12: clear
 "install Node.js, then npm install -g repomix" error instead of a generic
-subprocess failure (`notes/notes_017.txt`). **Note for future sessions:**
-don't revisit fully-bundled Node without a real reason (the chosen
-pre-flight-and-guide approach turning out to be an actual adoption
-blocker) — that tradeoff was already discussed and decided.
+subprocess failure (`notes/notes_017.txt`). Second step shipped in 1.13:
+real PyInstaller build (`build-exe.ps1`, `requirements-build.txt`),
+smoke-tested in an isolated temp dir — surfaced and fixed a real
+frozen-build persistence bug (see the `APP_DIR`/`RESOURCE_DIR` invariant
+below) and a real pre-existing main-window layout bug (Settings button was
+clipped out of view; `notes/notes_018.txt`). Remaining: README download/
+build docs, code signing (separate decision), optional CI release
+automation — see ROADMAP.md. **Note for future sessions:** don't revisit
+fully-bundled Node without a real reason (the chosen pre-flight-and-guide
+approach turning out to be an actual adoption blocker) — that tradeoff was
+already discussed and decided.
 
 ## Explicitly rejected (per notes_002.txt) unless the user asks again
 Progress bar/spinner, grid()/place()/ttk/Qt/web UI, Tk variable bindings, a second
@@ -392,5 +408,27 @@ design. Don't reintroduce them under a "polish" pass without confirming it's wan
   generic subprocess failure) — verified via an isolated `shutil.which`
   test with an empty PATH (simulates nothing installed) plus source
   review; no live GUI test needed since this only changes a failure-path
-  message string. See `notes/notes_017.txt`. Not yet committed/tagged/
-  pushed this round.
+  message string. See `notes/notes_017.txt`.
+- 2026-09-11: Implemented 1.13, the second Distributable build step: real
+  PyInstaller packaging (`build-exe.ps1`, `requirements-build.txt`,
+  `.gitignore` +`*.spec`). Built a real `dist\Agent Scaffolder.exe` and
+  smoke-tested it in a fully isolated temp directory (no source tree
+  nearby). This surfaced two real bugs, found specifically because this
+  was the first time this session a real screenshot of the running main
+  window was taken (every other check used `.cget()` state assertions,
+  which can't catch visual clipping): (1) a frozen-build persistence bug -
+  `APP_DIR` would have resolved inside PyInstaller's temp extraction dir,
+  silently discarding every setting each relaunch; fixed with a new
+  `RESOURCE_DIR` split (see architecture invariants above); (2) a real,
+  pre-existing main-window layout bug - the fixed `520x340` geometry never
+  grew to fit the Cancel button (1.4) or file-selection checkboxes (1.7),
+  clipping the Settings button out of the visible window entirely (affects
+  source-run too, not just frozen); fixed to `520x480`. Verified the fix
+  quickly from source first (screenshot), then confirmed again in a fresh
+  rebuilt exe. Cleaned up all test processes/directories; confirmed no
+  side effects on this session's real config files. See
+  `notes/notes_018.txt`. **User asked to wrap up for the night after this
+  commit** ("Finish off the commit and we'll wrap up for tonight. Pick it
+  up again tomorrow.") - committed but not pushed/tagged; do that next
+  session when asked. Remaining Distributable-build work (README docs,
+  code signing, optional CI release automation) queued in ROADMAP.md.
