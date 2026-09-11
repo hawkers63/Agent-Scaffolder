@@ -131,7 +131,10 @@ memory and only hit disk after all three requests succeed, which resolves the re
       terminate it, plus a cancellation checkpoint before each Anthropic call and
       before writing files (a request already sent can't be recalled, but no
       further paid calls happen after cancel). See `notes/notes_007.txt`.
-- [ ] Bounded Repomix subprocess timeout.
+- [x] Bounded Repomix subprocess timeout. **Shipped in 1.9** (2026-09-11):
+      5-minute `REPOMIX_TIMEOUT_SECONDS` ceiling; on expiry, terminate() with
+      a kill() fallback, then a clear `ScaffoldingError` before any Anthropic
+      call. See `notes/notes_013.txt`.
 - [ ] Optional Repomix exclusion passthrough so a target project's own excludes are
       respected (README already warns this checkout's `.gitignore` doesn't protect
       other target projects).

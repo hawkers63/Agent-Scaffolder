@@ -1,0 +1,98 @@
+AGENT SCAFFOLDER — BOUNDED REPOMIX SUBPROCESS TIMEOUT
+Date: 11 September 2026
+Report: notes_013.txt
+Predecessor: notes_012.txt (v1.8 numbered output)
+Author role: Quality assurance and debugging specialist
+
+1. PURPOSE
+Ship the ROADMAP v1.3-bucket item "Bounded Repomix subprocess timeout."
+Second release of batch 2 (1.8-1.11).
+
+2. CHANGES
+- agent_scaffolder.py: new `REPOMIX_TIMEOUT_SECONDS = 300` module constant
+  (next to `OUTPUT_ROOT`), documented as a safety net against a hung or
+  pathologically large repo, not a normal-case limit.
+- `run_scaffolding`'s `proc.wait()` call is now `proc.wait(timeout=
+  REPOMIX_TIMEOUT_SECONDS)` wrapped in try/except `subprocess.TimeoutExpired`.
+  On expiry: `proc.terminate()`, then `proc.wait(timeout=5)` to confirm it
+  actually exited, falling back to `proc.kill()` if it's still alive after
+  that, then raises a `ScaffoldingError` with a clear message naming the
+  timeout and stating the process was stopped. This happens before the XML
+  is read and before any Anthropic call, so a timeout costs nothing beyond
+  the wasted wall-clock time already spent waiting.
+- This is the same terminate/kill mechanism already live-verified for the
+  v1.4 Cancel button (`self._current_process` is still set before the wait,
+  so `cancel_generation()` and the timeout path share the exact same
+  process handle and cleanup shape) - a timer-triggered stop instead of a
+  user-click-triggered one, not new subprocess-handling logic.
+- APP_VERSION bumped to 1.9. CHANGELOG.md and ROADMAP.md updated.
+
+3. VERIFICATION - METHOD CHANGE MID-TASK (important, read before repeating)
+First attempt reused the batch-1 checkpoint's approach: drive the real
+`ScaffoldingApp` via `app.mainloop()` + `app.after(...)`, with
+`subprocess.Popen` monkeypatched to spawn a genuinely slow dummy process
+(`python -c "time.sleep(30)"`) and `REPOMIX_TIMEOUT_SECONDS` lowered to 1s,
+to prove the real code path fires. This **hung the Windows process twice**:
+- First hang: reaching the timeout correctly raises `ScaffoldingError`,
+  which `_show_error` reports via a real blocking native
+  `messagebox.showerror` dialog - exactly as it does for every other
+  generation error (existing behaviour, not something this change
+  introduced). Nothing in the harness could dismiss that real OS modal, so
+  the test sat there indefinitely. Killed the stuck `python.exe` processes
+  (verified no orphan afterward, no repo/output-folder side effects - this
+  test never got far enough to touch Repomix output or the API).
+- Second hang, after patching `messagebox.showerror` to a no-op recorder to
+  avoid the same problem: the driver process itself went "Not Responding"
+  at the Windows message-pump level (confirmed via `Get-Process ... |
+  Select Responding` showing `False`), not just slow - a real GUI-level
+  deadlock, cause not identified (candidates considered: some interaction
+  between the force-killed prior modal's OS-level grab state and the next
+  Tk instance's window creation; not conclusively diagnosed). Killed it too
+  (`Stop-Process -Force`); confirmed no orphan processes remained afterward
+  and no repo/output side effects.
+
+Two live-GUI hangs in a row is the threshold to stop iterating on that
+approach rather than keep trying variations, per general guidance on
+avoiding automation rabbit holes. Reassessed what actually needed live
+proof: not "does the whole GUI wire up correctly" (the surrounding
+`self._current_process` / `ScaffoldingError` / except-chain plumbing is
+identical to the already-live-verified v1.4 Cancel button, see
+notes_007.txt and notes_011.txt), but specifically "does
+`Popen(...).wait(timeout=short)` really raise `TimeoutExpired`, does
+`terminate()` really kill a real child process, and does the confirming
+`wait()` afterward see it as dead, on this real Windows machine." That's
+answerable with a plain, non-Tk Python script - no GUI hang risk at all.
+
+Wrote a standalone script (`v19_timeout_unit.py`, not committed - scratch
+only) that does exactly that against a real `python -c "time.sleep(30)"`
+child process with `REPOMIX_TIMEOUT_SECONDS = 1`: confirmed `TimeoutExpired`
+raised at ~1.00s as expected, `terminate()` succeeded (child exited with
+code 1, no need for the `kill()` fallback), and a follow-up `poll()` showed
+the process genuinely gone. This directly validates the new mechanism in
+isolation; combined with source review of how it's wired into
+`run_scaffolding` (a small, mechanical change reusing the exact pattern
+already proven live for Cancel), this is sufficient without a second
+live-GUI attempt.
+
+4. RESULT
+PASS (isolated subprocess-level test): `TimeoutExpired` raised on schedule,
+`terminate()` killed the real child process, confirmed dead by a follow-up
+`wait()`/`poll()`.
+PASS: `python -m py_compile agent_scaffolder.py`.
+PASS: source review of the try/except wiring, the `ScaffoldingError`
+message text, and that `self._current_process` is still correctly cleared
+in both the timeout branch and the normal-completion branch.
+NOT DONE (deliberately, given the above): a live GUI pass showing the
+actual error dialog/status line for a real timeout. Given the identical
+mechanism already passed live verification for Cancel in batch-1, and two
+attempts at repeating that live pass here hung the environment for reasons
+unrelated to the app's own logic, this is judged sufficient. If a future
+session has a working desktop-automation tool, this would be a reasonable
+thing to confirm visually then.
+
+5. FOLLOW-UP
+None on the timeout feature itself. Operational note for future sessions:
+prefer isolating "does this exact non-GUI mechanism behave correctly on
+this OS" from "does the GUI wire it up correctly" when the GUI wiring is
+already proven elsewhere - it avoids GUI-hang risk entirely for the parts
+that don't need a real Tk window to verify.

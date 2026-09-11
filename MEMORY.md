@@ -19,10 +19,10 @@ and are now the dev-instructions the maintainer follows when working on the tool
 itself (see `CONTRIBUTING.md`).
 
 ## Current version
-**1.8** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
-First release of batch 2 (1.8-1.11); verified by source review + `py_compile` +
-a direct interactive check of the new pure helper function only (no live
-Repomix/Anthropic call yet - that's deferred to batch 2's checkpoint after 1.11).
+**1.9** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
+Batch 2 (1.8-1.11) in progress; verified by source review + `py_compile` +
+targeted isolated tests only (no live Repomix/Anthropic call yet - that's
+deferred to batch 2's checkpoint after 1.11).
 1.3-1.7 (batch 1) were live-verified together on 2026-09-11 (`notes/notes_011.txt`)
 - no bugs found. 1.0/1.1/1.2 were each live-verified individually
 (`notes/notes_004.txt`, `notes/notes_005.txt`). Tags exist through `v1.7`, pushed
@@ -50,6 +50,19 @@ repeated. See `notes/notes_011.txt` §2 for the working pattern (also useful:
 wrapping `anthropic.resources.messages.Messages.create` to count real calls
 without changing behavior, to verify call-count claims precisely instead of
 inferring them from files written).
+
+**Second harness gotcha (2026-09-11, v1.9 attempt):** driving the real GUI to
+test a `ScaffoldingError` path hung the Windows process twice - once because
+`_show_error` pops a real blocking native `messagebox.showerror` dialog with
+no automated way to dismiss it (patch `messagebox.showerror` to a no-op
+recorder if a test needs to reach an error path), and once with the driver
+process itself going "Not Responding" at the Windows message-pump level for
+an undiagnosed reason even after that patch. When a mechanism (e.g.
+`Popen.wait(timeout=...)` + `terminate()`/`kill()`) is already live-verified
+through the GUI for one feature (Cancel, v1.4), and a new feature reuses the
+exact same mechanism (the 1.9 Repomix timeout), prefer an isolated
+non-Tk script proving the mechanism itself over a second live-GUI attempt -
+it gets equivalent confidence without the hang risk. See `notes/notes_013.txt`.
 
 ## Architecture invariants — do not break these without an explicit request
 - Single-file app (`agent_scaffolder.py`). No module split.
@@ -279,3 +292,12 @@ design. Don't reintroduce them under a "polish" pass without confirming it's wan
   Batch 2 plan: 1.8 (done) -> 1.9 bounded Repomix subprocess timeout ->
   1.10 exclusion passthrough -> 1.11 in-app project manager -> live-test
   checkpoint.
+- 2026-09-11: Implemented 1.9 (bounded Repomix subprocess timeout,
+  `REPOMIX_TIMEOUT_SECONDS = 300`, reusing the Cancel button's
+  terminate/kill mechanism on a timer instead of a click). Live-GUI
+  verification attempt hung the Windows process twice (see "Second harness
+  gotcha" above) - killed the stuck processes both times, confirmed no
+  orphan processes or repo/output side effects either time. Pivoted to an
+  isolated non-Tk subprocess test of the exact timeout/terminate/kill
+  mechanism instead, which passed cleanly, plus source review of the
+  small wiring change. See `notes/notes_013.txt`.

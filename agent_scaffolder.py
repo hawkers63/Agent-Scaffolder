@@ -17,7 +17,7 @@ import anthropic
 import keyring
 from tkinter import filedialog, messagebox
 
-APP_VERSION = "1.8"
+APP_VERSION = "1.9"
 
 # Credential Manager service for Anthropic API key (never store keys in files)
 SERVICE_NAME = "AgentScaffolderApp"
@@ -35,6 +35,12 @@ OUTPUT_ROOT = os.path.join(
     "Desktop",
     "Agent Outputs",
 )
+
+# Repomix should finish in well under a minute for a typical project; this is
+# a safety net against a hung or pathologically large repo, not a normal-case
+# limit. On expiry the process is terminated/killed and generation stops
+# before any Anthropic call is made.
+REPOMIX_TIMEOUT_SECONDS = 300
 
 # Generation model. Resolution order (see resolve_model()): the
 # AGENT_SCAFFOLDER_MODEL env var (power-user/CI override) > the choice saved
@@ -631,7 +637,20 @@ class ScaffoldingApp(ctk.CTk):
                     shell=True,
                 )
             self._current_process = proc
-            returncode = proc.wait()
+            try:
+                returncode = proc.wait(timeout=REPOMIX_TIMEOUT_SECONDS)
+            except subprocess.TimeoutExpired:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                self._current_process = None
+                raise ScaffoldingError(
+                    f"Repomix did not finish within {REPOMIX_TIMEOUT_SECONDS} seconds "
+                    "and was stopped. The target project may be too large, or Repomix "
+                    "may be stuck."
+                )
             self._current_process = None
             if self._cancel_requested:
                 raise GenerationCancelled()

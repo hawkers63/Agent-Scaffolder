@@ -4,6 +4,19 @@
 
 Nothing yet.
 
+## 1.9 — 2026-09-11
+
+Batch-2 feature work, second release (see `notes/notes_013.txt`).
+
+- **Bounded Repomix subprocess timeout.** Repomix now has a 5-minute
+  (`REPOMIX_TIMEOUT_SECONDS`) ceiling instead of waiting indefinitely. On
+  expiry the process is terminated (falling back to a hard kill if it
+  doesn't exit within 5 more seconds) and generation stops with a clear
+  error before any Anthropic call is made — no wasted API cost from a
+  hung or pathologically large target project. Same terminate/kill
+  mechanism as the v1.4 Cancel button, just triggered by a timer instead
+  of a user click.
+
 ## 1.8 — 2026-09-11
 
 Batch-2 feature work, first release (see `notes/notes_012.txt`).
