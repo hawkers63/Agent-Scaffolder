@@ -20,20 +20,36 @@ itself (see `CONTRIBUTING.md`).
 
 ## Current version
 **1.7** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
-Verified by source review + `py_compile` only, per the batched testing cadence
-adopted this session (see "Testing cadence" below and `ROADMAP.md` intro): versions
-1.3-1.7 ship without a live Anthropic/Repomix run to keep real API cost down (a
-one-hour live-testing session cost ~$7), with a live end-to-end test reserved for
-the 1.8 checkpoint release. 1.1 and 1.2 were both live-verified and tagged
-(`notes/notes_004.txt`, `notes/notes_005.txt`); the last git tag is `v1.2`.
+1.3-1.7 shipped on source review + `py_compile` only, per the batched testing
+cadence adopted this session, then **live-verified together as a batch on
+2026-09-11** (real Repomix + real Anthropic/Haiku-4.5 calls; see
+`notes/notes_011.txt`) — no bugs found, no fix release needed. 1.0/1.1/1.2 were
+each live-verified individually (`notes/notes_004.txt`, `notes/notes_005.txt`);
+tags exist through `v1.2`, with `v1.3`-`v1.7` tagged/pushed this session per
+explicit request (see session log).
 
 ## Testing cadence (adopted 2026-09-11)
 Real Anthropic API calls and real Repomix runs cost real money per execution.
 Going forward: five code-only releases (source review + compile check, no live
-call) then a 6th release dedicated to a live test pass and fixing whatever it
-finds, then repeat. Current batch: 1.3-1.7 code-only, 1.8 is the live-test/fix
-checkpoint. Don't skip the 1.8 checkpoint or extend the batch past 5 without
-asking — the whole point is keeping cost predictable.
+call) then a live test pass, fixing whatever it finds, then repeat. Batch 1
+(1.3-1.7) checkpoint ran 2026-09-11 and found **no bugs** — see
+`notes/notes_011.txt`. Since nothing needed fixing, no separate bugfix version
+was cut; 1.8 starts batch 2 with real feature work. If a future checkpoint
+*does* find bugs, that fix work should occupy the next version number before
+batch 2's five code-only releases resume. Don't skip a batch's live-test
+checkpoint or extend a batch past 5 without asking — the whole point is
+keeping cost predictable.
+
+Live-test harness note for next time: drive the real `ScaffoldingApp` through
+its own real `app.mainloop()`, scheduling steps via `app.after(...)` — do NOT
+manually poll with `app.update()` in a loop, since that leaves the main thread
+"not in the main loop" from Tcl's point of view and breaks the worker thread's
+`self.after(0, ...)` marshaling (`RuntimeError: main thread is not in main
+loop`). This is a harness bug, not an app bug, but it wastes a test cycle if
+repeated. See `notes/notes_011.txt` §2 for the working pattern (also useful:
+wrapping `anthropic.resources.messages.Messages.create` to count real calls
+without changing behavior, to verify call-count claims precisely instead of
+inferring them from files written).
 
 ## Architecture invariants — do not break these without an explicit request
 - Single-file app (`agent_scaffolder.py`). No module split.
@@ -221,8 +237,30 @@ design. Don't reintroduce them under a "polish" pass without confirming it's wan
   regardless since it's the shared input; completion message now states the
   count generated) — see `notes/notes_010.txt`. This was the last v1.3-bucket
   item pulled forward into batch-1, chosen specifically because it reduces
-  per-run Anthropic cost. **This closes out batch-1 (1.3-1.7).** 1.8 is
-  reserved as the live-test/fix checkpoint for this batch — per the agreed
-  cadence, do not skip it or start batch-2 code changes before it runs. The
-  most important thing for 1.8 to confirm live: unchecking files actually
-  reduces the number of Anthropic requests made, not just files written.
+  per-run Anthropic cost. **This closes out batch-1 (1.3-1.7).**
+- 2026-09-11: Ran the batch-1 live-test checkpoint (user-authorized real API
+  spend: "go ahead with the real tests and push afterwards"). Drove the real
+  `ScaffoldingApp` via its own `app.mainloop()` + `app.after(...)`-scheduled
+  steps (first attempt used a manual `app.update()` poll loop and hit
+  `RuntimeError: main thread is not in main loop` from the worker thread's
+  `self.after(0, ...)` calls — a harness bug, fixed with zero cost incurred
+  from the failed attempt; see "Testing cadence" above). Results: **no bugs
+  found.** Unchecking `bug_hunter.md`/`enhancement_agent.md` and generating
+  only `agents.md` made exactly 1 real Anthropic call (confirmed via an
+  instrumented call counter, not inferred from files written) and left the
+  other two files byte-for-byte untouched; mid-run state (wait cursor,
+  disabled checkbox, enabled Cancel) was all correct. Cancelling immediately
+  after starting made 0 calls and ended at "Cancelled." cleanly. Settings
+  window heading and env-override note (1.5) both render with the exact
+  expected text, checked with and without `AGENT_SCAFFOLDER_MODEL` set. Full
+  report: `notes/notes_011.txt`. The close-during-job native dialog was
+  deliberately NOT triggered live (real blocking modal, no desktop-automation
+  tool to safely dismiss it, low marginal value for a single well-tested
+  stdlib call already reviewed three times) — remains code-review-only.
+  Mid-checkpoint, user asked (softly — "just a thought") for numbered output
+  files (`agents_2.md`, etc.) instead of silent overwrite on regeneration;
+  queued in ROADMAP.md's v1.3 feature-expansion bucket rather than folded into
+  the checkpoint, since changing the write contract mid-verification would
+  have invalidated the very test being run. Tagged and pushed `v1.3`-`v1.7`
+  to `origin` this session per the user's explicit "push afterwards" — see
+  below for confirmation once done.

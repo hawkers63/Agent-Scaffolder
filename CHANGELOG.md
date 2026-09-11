@@ -21,8 +21,20 @@ Batch-1 feature work, final release of this batch (see `notes/notes_010.txt`).
   existing project/Settings locks, and unlock in `reset_buttons`.
 
 This closes out the batch adopted 2026-09-11 (1.3-1.7). Per the agreed
-cadence, 1.8 is reserved for a live end-to-end test pass covering everything
-in this batch, plus fixes for whatever it finds.
+cadence, a live end-to-end test pass covering everything in this batch was
+run immediately after, with fixes reserved for whatever it found.
+
+**Live-test checkpoint (2026-09-11, see `notes/notes_011.txt`): all pass, no
+bugs found.** Real Repomix + real Anthropic (Haiku 4.5) calls confirmed:
+unchecking two files and generating only `agents.md` made exactly 1 API
+call (not 3), left the other two files byte-for-byte untouched, and showed
+the wait cursor / disabled checkbox / enabled Cancel button mid-run;
+cancelling immediately after starting made 0 API calls and ended cleanly at
+"Cancelled."; the Settings window's heading and env-override note (1.5)
+both render with the exact expected text. Since nothing needed fixing, no
+6th "bugfix" version was cut — the next release starts fresh at 1.8 with
+real feature work (a "regenerate to a numbered file instead of overwriting"
+request came in during this checkpoint; see ROADMAP.md).
 
 ## 1.6 — 2026-09-11
 

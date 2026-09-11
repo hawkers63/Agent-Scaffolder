@@ -10,9 +10,13 @@ until picked up in a session — treat it as a backlog. Record actual releases i
 
 **Testing cadence (adopted 2026-09-11):** live end-to-end runs (real Repomix +
 real Anthropic API calls) cost real money, so they're batched — five code-only
-releases verified by source review / compile checks only, then a 6th release
-dedicated to a live test pass and fixing whatever it finds, then repeat. This batch
-is versions 1.3–1.7; the checkpoint live test and any resulting fix release is 1.8.
+releases verified by source review / compile checks only, then a live test
+pass, fixing whatever it finds, then repeat. Batch 1 was versions 1.3-1.7;
+its live-test checkpoint (2026-09-11, `notes/notes_011.txt`) found **no
+bugs**, so no separate "bugfix" release was needed — 1.8 is free for batch
+2's first real feature (see below). If a future checkpoint does find bugs,
+that fix work is what should occupy the next version number before batch
+2's five code-only releases begin.
 
 ## v1.1 — Correctness & reliability (shipped)
 Both audits agree these are the changes that make current behaviour honest, before any
@@ -116,7 +120,8 @@ memory and only hit disk after all three requests succeed, which resolves the re
       (`agents.md` / `bug_hunter.md` / `enhancement_agent.md`, all checked by
       default) filter which files trigger an Anthropic call; Repomix still
       packages once regardless (shared input). See `notes/notes_010.txt`.
-      Closes out batch-1 (1.3-1.7); 1.8 is the reserved live-test checkpoint.
+      Closes out batch-1 (1.3-1.7). Live-test checkpoint run 2026-09-11
+      (`notes/notes_011.txt`): all pass, no bugs found — see "Testing cadence" above.
 - [x] Cancel button for an in-flight generation (join/kill the subprocess only).
       **Shipped in 1.4** (2026-09-11): Repomix now runs via `Popen` so Cancel can
       terminate it, plus a cancellation checkpoint before each Anthropic call and
@@ -126,6 +131,15 @@ memory and only hit disk after all three requests succeed, which resolves the re
 - [ ] Optional Repomix exclusion passthrough so a target project's own excludes are
       respected (README already warns this checkout's `.gitignore` doesn't protect
       other target projects).
+- [ ] **Numbered output instead of overwrite** (explicit user request, 2026-09-11,
+      made mid-way through the batch-1 live-test checkpoint): instead of always
+      writing `agents.md` and silently overwriting a previous run, write
+      `agents_2.md`, `agents_3.md`, etc. when a lower-numbered file already exists,
+      so a bad generation doesn't destroy a working set of instructions. Supersedes
+      the vaguer "Generation history" idea in "Later" below now that there's a
+      concrete, requested shape for it. Needs a decision on exact numbering rule
+      (per-file counter vs. one shared run number across all three files) before
+      implementing.
 
 ## Later / needs discussion
 Bigger bets — worth a decision before building:
@@ -144,11 +158,10 @@ Bigger bets — worth a decision before building:
   Opus) shipped 2026-09-10 (see "Since 1.1" above). True multi-*provider* support (a
   non-Anthropic backend) is a separate, much larger idea and remains unrequested —
   revisit only if there's a real need to target non-Claude assistants.
-- **Generation history.** Keep previous outputs (timestamped) instead of silent
-  overwrite, so a bad generation doesn't destroy a working set of instructions.
-- **Live API/model verification.** No live Anthropic call has ever been exercised in
-  review; worth a manual smoke test pinned to a specific SDK version before relying on
-  this for real project work.
+- **Live API/model verification.** Live-verified multiple times now: 1.1
+  (`notes/notes_004.txt`), 1.2 (`notes/notes_005.txt`, maintainer-confirmed), and the
+  batch-1 checkpoint covering 1.3-1.7 (`notes/notes_011.txt`). Keep doing this at
+  each cadence checkpoint rather than treating it as a one-time item.
 
 ## Explicitly out of scope unless requested again
 See `notes/notes_002.txt` §8 — progress bars/spinners, grid()/place()/ttk/Qt/web UI

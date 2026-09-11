@@ -1,0 +1,129 @@
+AGENT SCAFFOLDER — BATCH-1 LIVE-TEST CHECKPOINT (v1.3-v1.7)
+Date: 11 September 2026
+Report: notes_011.txt
+Predecessor: notes_010.txt (v1.7 single-file regeneration)
+Author role: Quality assurance and debugging specialist
+
+1. PURPOSE
+Live-verification checkpoint for the batched testing cadence adopted this
+session (ROADMAP.md "Testing cadence"): after five code-only releases
+(1.3-1.7), run real Repomix + real Anthropic API calls to confirm the batch
+actually works, before starting the next batch. User explicitly authorized
+real API spend for this checkpoint ("go ahead with the real tests and push
+afterwards").
+
+2. METHOD
+No dedicated Windows desktop-automation tool is available in this
+environment (only a browser-scoped `computer` tool exists, per prior
+sessions' notes). Rather than reuse the earlier approach of simulated
+mouse clicks via PowerShell/user32.dll, this checkpoint drove the real
+`ScaffoldingApp` class programmatically: instantiated the real class,
+ran its real `app.mainloop()`, and scheduled each test step via
+`app.after(...)` (the same thread-marshaling mechanism the app itself
+uses for `update_status`/`reset_buttons`), rather than manually polling
+with `app.update()` in a loop. Anthropic's `Messages.create` was wrapped
+(not replaced) purely to count real calls; every call still went through
+to the real API. This is a more faithful, more repeatable live test than
+pixel-coordinate clicking, at the cost of not visually confirming pixel
+rendering for every element (see section 5).
+
+First attempt used a manual `app.update()` poll loop instead of
+`mainloop()` and hit `RuntimeError: main thread is not in main loop` when
+the worker thread called `self.after(0, ...)` — a harness bug, not an app
+bug (real usage always calls `app.mainloop()`, which this harness initially
+didn't). Confirmed zero cost from the failed attempt: the crash happened at
+the `update_status("Generating agents.md...")` call, before any
+`client.messages.create()` was reached; no temp XML was left behind, no
+orphan process, output files unchanged. Fixed by rewriting the harness
+around `app.mainloop()` + `app.after(...)`-scheduled steps.
+
+3. RESULTS — ALL PASS, NO BUGS FOUND
+TEST 1 — single-file regeneration (v1.7), against this repo's own
+`Desktop/Agent Outputs/Agent Scaffolder` output (baseline: three files
+last written 2026-09-10 20:49 during the 1.1 checkpoint):
+- Unchecked `bug_hunter.md` and `enhancement_agent.md`, left only
+  `agents.md` checked. `_selected_agent_files()` correctly returned
+  `['agents.md']`.
+- Real run against model `claude-haiku-4-5` (the currently configured
+  choice). Exactly **1** real Anthropic call was made — confirmed by an
+  instrumented call counter, not just by files written. This was the
+  single most important thing to confirm live per notes_010.txt's
+  follow-up, since it's the item most directly tied to the cost problem
+  that started this whole cadence.
+- Mid-run: status "Packaging codebase with Repomix...", cursor "wait",
+  Cancel button state "normal", `agents.md` checkbox state "disabled" —
+  all correct (v1.3/v1.4 behaviour holding up under a partial selection,
+  per notes_010.txt's specific follow-up item).
+- Final status: "Agent scaffolding complete! (1 file)\nOutput: ..." —
+  correct pluralization/count (v1.7).
+- `agents.md` mtime changed (new content, 20187 bytes, ends on a complete
+  sentence, not truncated); `bug_hunter.md` and `enhancement_agent.md`
+  mtimes were **byte-for-byte unchanged** from the 2026-09-10 baseline —
+  confirms the file filter in `run_scaffolding` (notes_010.txt) only
+  touches what's selected.
+
+TEST 2 — cancel immediately after starting (v1.4):
+- Re-checked all three boxes, started a generation, called
+  `cancel_generation()` 50ms later (before Repomix could plausibly have
+  finished against this repo).
+- **0** Anthropic calls made — the cancellation checkpoint after Repomix
+  fired before the loop reached any `client.messages.create()`, exactly as
+  designed. This is a real, zero-cost confirmation of the cancel path.
+- Status transitioned "Cancelling..." -> "Cancelled." (no error dialog).
+  Cancel button correctly disabled after; `_job_running` cleared; cursor
+  cleared back to default.
+
+TEST 3 — Settings window copy (v1.5), zero-cost (no Repomix/Anthropic
+calls):
+- Without `AGENT_SCAFFOLDER_MODEL` set: window title and inner heading
+  both read exactly "Settings" (not the old "API Configuration"); model
+  dropdown enabled; no override note present.
+- With `AGENT_SCAFFOLDER_MODEL=claude-haiku-4-5` set for the test process
+  only: model dropdown correctly disabled; override note text matched
+  exactly: "Model choice is locked by the AGENT_SCAFFOLDER_MODEL
+  environment variable (claude-haiku-4-5)." — confirms the exact 1.5
+  copy renders as written, not just compiles.
+
+4. OUTCOME
+No bugs found across any of the three areas explicitly flagged as needing
+live confirmation in notes_010.txt's follow-up section. Per the agreed
+cadence, the 6th release in a batch is reserved for fixing whatever the
+live test finds — since nothing needed fixing, **no code changed and no
+version bump was made**; batch-2 starts fresh at 1.8 with real feature
+work rather than "1.8 the bugfix release." This mirrors how 1.1's live
+verification (notes_004.txt) and 1.2's (notes_005.txt) were recorded as
+verification of an already-shipped version rather than bumping the version
+again.
+
+5. NOT DONE (deliberately) / KNOWN GAPS
+- The close-during-job confirmation dialog (`_on_close`, v1.3/v1.5 copy)
+  was NOT triggered live. `messagebox.askyesno` is a real blocking native
+  modal in this environment; dismissing it programmatically would need a
+  simulated OS-level keystroke/click with no desktop-automation tool
+  available, and a wrong keybinding assumption or a stolen-focus terminal
+  window (a documented risk in this environment per MEMORY.md's earlier
+  operational note) could hang the session on an un-dismissable dialog.
+  Given the dialog is a single well-tested stdlib call with a plain string
+  argument, already source-reviewed three times (notes_006/007/008), the
+  risk of forcing a live click-through outweighed the marginal value here.
+  Remains code-review-verified only, same category of gap as prior
+  sessions' "not GUI-tested" notes.
+- No visual/pixel screenshot was taken anywhere in this checkpoint —
+  verification used `.cget()` widget-state assertions instead, which are
+  more precise than eyeballing a screenshot for the properties that
+  matter (exact text, exact enabled/disabled state) but do not prove
+  something is visually legible, correctly positioned, or not clipped/
+  overlapping on screen. If a future release changes layout significantly,
+  a real visual pass is still worth doing.
+- Only the default project (this repo, via the remembered `Other...` path
+  in `last_project.json`) and the default model (Haiku 4.5) were exercised.
+  Other projects/models were not live-tested this checkpoint.
+
+6. FOLLOW-UP
+User requested (mid-checkpoint) a "generation history" feature: instead of
+overwriting `agents.md`/etc. in place, save as `agents_2.md` and so on.
+This maps to the ROADMAP "Later" item "Generation history... instead of
+silent overwrite" — previously unrequested, now explicitly asked for.
+Queued as the next real feature to scope and build (starting at 1.8), not
+folded into this checkpoint since it would have changed the exact output
+contract this checkpoint was verifying.
