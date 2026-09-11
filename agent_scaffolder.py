@@ -17,7 +17,7 @@ import anthropic
 import keyring
 from tkinter import filedialog, messagebox
 
-APP_VERSION = "1.10"
+APP_VERSION = "1.11"
 
 # Credential Manager service for Anthropic API key (never store keys in files)
 SERVICE_NAME = "AgentScaffolderApp"
@@ -148,6 +148,18 @@ def save_last_project_path(path):
         pass
 
 
+def save_projects(projects):
+    """Persist the in-app Project Manager's list to projects.json. The file
+    remains hand-editable too; this only overwrites it on an explicit
+    add/edit/remove action, and only with entries that already passed
+    _valid_project_entries."""
+    try:
+        with open(PROJECTS_FILE, "w", encoding="utf-8") as f:
+            json.dump(projects, f, indent=2)
+    except OSError:
+        pass
+
+
 def load_model_choice():
     try:
         with open(MODEL_CHOICE_FILE, "r", encoding="utf-8") as f:
@@ -216,7 +228,7 @@ class SettingsWindow(ctk.CTkToplevel):
         super().__init__(*args, **kwargs)
         self.on_saved = on_saved
         self.title("Settings")
-        self.geometry("400x340")
+        self.geometry("400x440")
         self.grab_set()
         icon_path = os.path.join(APP_DIR, "icon", "Agent.Scaffolder.ico")
         if os.path.isfile(icon_path):
@@ -281,6 +293,19 @@ class SettingsWindow(ctk.CTkToplevel):
             )
             self.model_note.pack(padx=20, pady=(0, 10))
 
+        self.manage_projects_btn = ctk.CTkButton(
+            self,
+            text="Manage Projects...",
+            fg_color="gray",
+            hover_color="#555555",
+            command=self.open_project_manager,
+        )
+        self.manage_projects_btn.pack(pady=(10, 0))
+
+    def open_project_manager(self):
+        main_app = self.master
+        ProjectManagerWindow(self, on_saved=main_app.refresh_projects_list)
+
     def on_model_selected(self, choice):
         model_id = self._label_to_id.get(choice)
         if model_id:
@@ -304,6 +329,161 @@ class SettingsWindow(ctk.CTkToplevel):
         self.destroy()
         if callback:
             callback()
+
+
+class ProjectManagerWindow(ctk.CTkToplevel):
+    """Compact add/edit/remove UI over projects.json, opened from Settings."""
+
+    def __init__(self, *args, on_saved=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.on_saved = on_saved
+        self.title("Manage Projects")
+        self.geometry("460x520")
+        self.grab_set()
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        icon_path = os.path.join(APP_DIR, "icon", "Agent.Scaffolder.ico")
+        if os.path.isfile(icon_path):
+            try:
+                self.iconbitmap(icon_path)
+                self.after(200, lambda p=icon_path: self.iconbitmap(p))
+            except Exception:
+                pass
+
+        self.title_label = ctk.CTkLabel(self, text="Manage Projects", font=("Segoe UI", 16, "bold"))
+        self.title_label.pack(pady=(15, 10))
+
+        self.list_frame = ctk.CTkScrollableFrame(self, width=420, height=200)
+        self.list_frame.pack(padx=20, pady=(0, 10))
+
+        self._editing_name = None
+        self.projects = load_projects()
+
+        self.form_label = ctk.CTkLabel(self, text="Add project:")
+        self.form_label.pack(anchor="w", padx=20, pady=(5, 0))
+
+        self.name_entry = ctk.CTkEntry(self, width=420, placeholder_text="Name")
+        self.name_entry.pack(padx=20, pady=(4, 4))
+
+        path_row = ctk.CTkFrame(self, fg_color="transparent")
+        path_row.pack(padx=20, pady=(0, 4))
+        self.path_entry = ctk.CTkEntry(path_row, width=320, placeholder_text="Path")
+        self.path_entry.pack(side="left")
+        self.browse_btn = ctk.CTkButton(path_row, text="Browse...", width=90, command=self._browse_path)
+        self.browse_btn.pack(side="left", padx=(8, 0))
+
+        self.exclude_entry = ctk.CTkEntry(
+            self, width=420, placeholder_text="Exclude patterns (optional, e.g. *.log,node_modules/**)"
+        )
+        self.exclude_entry.pack(padx=20, pady=(0, 8))
+
+        btn_row = ctk.CTkFrame(self, fg_color="transparent")
+        btn_row.pack(padx=20, pady=(0, 15))
+        self.save_btn = ctk.CTkButton(btn_row, text="Add Project", command=self._save_entry)
+        self.save_btn.pack(side="left", padx=(0, 8))
+        self.clear_btn = ctk.CTkButton(
+            btn_row, text="Clear", fg_color="gray", hover_color="#555555", command=self._clear_form
+        )
+        self.clear_btn.pack(side="left")
+
+        self._render_list()
+
+    def _render_list(self):
+        for child in self.list_frame.winfo_children():
+            child.destroy()
+        if not self.projects:
+            ctk.CTkLabel(self.list_frame, text="No projects yet.", text_color="gray").pack(pady=10)
+            return
+        for p in self.projects:
+            row = ctk.CTkFrame(self.list_frame)
+            row.pack(fill="x", pady=(0, 6))
+            label_text = p["name"] + ("  (exclude set)" if p.get("exclude") else "")
+            ctk.CTkLabel(row, text=label_text, anchor="w").pack(anchor="w", padx=8, pady=(6, 0))
+            ctk.CTkLabel(
+                row, text=p["path"], text_color="gray", anchor="w", wraplength=320, justify="left"
+            ).pack(anchor="w", padx=8)
+            btns = ctk.CTkFrame(row, fg_color="transparent")
+            btns.pack(anchor="w", padx=8, pady=(4, 6))
+            ctk.CTkButton(
+                btns, text="Edit", width=70, command=lambda name=p["name"]: self._start_edit(name)
+            ).pack(side="left", padx=(0, 6))
+            ctk.CTkButton(
+                btns,
+                text="Remove",
+                width=70,
+                fg_color="#8B2E2E",
+                hover_color="#6E2424",
+                command=lambda name=p["name"]: self._remove(name),
+            ).pack(side="left")
+
+    def _start_edit(self, name):
+        for p in self.projects:
+            if p["name"] == name:
+                self._editing_name = name
+                self.name_entry.delete(0, "end")
+                self.name_entry.insert(0, p["name"])
+                self.path_entry.delete(0, "end")
+                self.path_entry.insert(0, p["path"])
+                self.exclude_entry.delete(0, "end")
+                self.exclude_entry.insert(0, p.get("exclude", ""))
+                self.form_label.configure(text=f'Editing "{name}":')
+                self.save_btn.configure(text="Save Changes")
+                return
+
+    def _clear_form(self):
+        self._editing_name = None
+        self.name_entry.delete(0, "end")
+        self.path_entry.delete(0, "end")
+        self.exclude_entry.delete(0, "end")
+        self.form_label.configure(text="Add project:")
+        self.save_btn.configure(text="Add Project")
+
+    def _browse_path(self):
+        selected = filedialog.askdirectory(title="Select project directory")
+        if selected:
+            self.path_entry.delete(0, "end")
+            self.path_entry.insert(0, selected)
+
+    def _save_entry(self):
+        name = self.name_entry.get().strip()
+        path = self.path_entry.get().strip()
+        exclude = self.exclude_entry.get().strip()
+        if not name or name == OTHER_LABEL:
+            messagebox.showerror("Invalid Project", f'Name cannot be empty or "{OTHER_LABEL}".')
+            return
+        if not path:
+            messagebox.showerror("Invalid Project", "Path cannot be empty.")
+            return
+        if any(p["name"] == name and name != self._editing_name for p in self.projects):
+            messagebox.showerror("Invalid Project", f'A project named "{name}" already exists.')
+            return
+
+        entry = {"name": name, "path": path}
+        if exclude:
+            entry["exclude"] = exclude
+
+        if self._editing_name:
+            self.projects = [entry if p["name"] == self._editing_name else p for p in self.projects]
+        else:
+            self.projects.append(entry)
+
+        self.projects = _valid_project_entries(self.projects)
+        save_projects(self.projects)
+        self._clear_form()
+        self._render_list()
+
+    def _remove(self, name):
+        if not messagebox.askyesno("Remove Project", f'Remove "{name}" from your project shortcuts?'):
+            return
+        self.projects = [p for p in self.projects if p["name"] != name]
+        save_projects(self.projects)
+        if self._editing_name == name:
+            self._clear_form()
+        self._render_list()
+
+    def _on_close(self):
+        self.destroy()
+        if self.on_saved:
+            self.on_saved()
 
 
 class ScaffoldingApp(ctk.CTk):
@@ -430,6 +610,31 @@ class ScaffoldingApp(ctk.CTk):
             self.project_menu.set(self.projects[0]["name"])
             self._suppress_project_event = False
             self._set_target(self.projects[0]["path"], remember=False)
+
+    def refresh_projects_list(self):
+        """Called after the Project Manager closes. Reloads projects.json and
+        updates the dropdown, keeping the current target directory selected
+        (by path, so a rename follows it) rather than resetting to whatever
+        last_project.json says on disk."""
+        self.projects = load_projects()
+        current_target = self.target_dir
+        names = [p["name"] for p in self.projects] + [OTHER_LABEL]
+        self._suppress_project_event = True
+        self.project_menu.configure(values=names)
+        matched_name = None
+        if current_target:
+            for p in self.projects:
+                if os.path.normcase(os.path.abspath(p["path"])) == os.path.normcase(
+                    os.path.abspath(current_target)
+                ):
+                    matched_name = p["name"]
+                    break
+            self.project_menu.set(matched_name or OTHER_LABEL)
+        self._suppress_project_event = False
+        if current_target:
+            self.refresh_ui_state()
+        else:
+            self._restore_last_selection()
 
     def on_project_selected(self, choice):
         if self._suppress_project_event:

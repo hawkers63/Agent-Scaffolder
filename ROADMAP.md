@@ -1,7 +1,7 @@
 # ROADMAP.md — Agent Scaffolder
 
-Current version: **1.7** (released 2026-09-11 — see `CHANGELOG.md` and
-`notes/notes_010.txt`; batch-1 live-test checkpoint in `notes/notes_011.txt`). This
+Current version: **1.11** (released 2026-09-11 — see `CHANGELOG.md` and
+`notes/notes_015.txt`; batch-2 live-test checkpoint pending). This
 roadmap sequences the work identified in the maintainer's own review notes
 (`notes/notes_001.txt`, `notes/notes_002.txt`) plus ideas for turning this from a
 working utility into a more capable desktop application. Nothing here is committed
@@ -13,14 +13,20 @@ real Anthropic API calls) cost real money, so they're batched — five code-only
 releases verified by source review / compile checks only, then a live test
 pass, fixing whatever it finds, then repeat. Batch 1 was versions 1.3-1.7;
 its live-test checkpoint (2026-09-11, `notes/notes_011.txt`) found **no
-bugs**, so no separate "bugfix" release was needed. **Batch 2 is now
-underway: 1.8-1.11**, covering the remaining v1.3-bucket items below
-(numbered output, subprocess timeout, exclusion passthrough, project
-manager) — four items, not five; the backlog only had four well-scoped
-items ready to go, and forcing a fifth just for symmetry wasn't worth it.
-Live-test checkpoint after 1.11. If a future checkpoint does find bugs,
-that fix work is what should occupy the next version number before the
-following batch's code-only releases begin.
+bugs**, so no separate "bugfix" release was needed. **Batch 2 (1.8-1.11)
+is now complete** — numbered output, subprocess timeout, exclusion
+passthrough, project manager — four items, not five; the backlog only had
+four well-scoped items ready to go, and forcing a fifth just for symmetry
+wasn't worth it. Three of the four hit real live-GUI automation hangs
+during verification (unrelated to the app's own correctness — see
+`notes/notes_013.txt` and `notes/notes_014.txt`); all were resolved via
+isolated non-GUI tests instead, and a firm rule is now recorded in
+MEMORY.md ("don't monkeypatch `subprocess.Popen` while driving a live
+`app.mainloop()` with a background thread"). **Batch 2's live-test
+checkpoint (real Repomix + Anthropic calls, no Popen patching) is next,
+before batch 3 begins.** If a checkpoint finds bugs, that fix work should
+occupy the next version number before the following batch's code-only
+releases begin.
 
 ## v1.1 — Correctness & reliability (shipped)
 Both audits agree these are the changes that make current behaviour honest, before any
@@ -117,8 +123,13 @@ memory and only hit disk after all three requests succeed, which resolves the re
       this. See `notes/notes_009.txt`.
 
 ## v1.3 — Feature expansion (needs a product decision first — see "Later" below)
-- [ ] Lightweight in-app project manager (add/edit/remove `projects.json` entries) as
+- [x] Lightweight in-app project manager (add/edit/remove `projects.json` entries) as
       its own compact `CTkToplevel`, following the existing load/save JSON pattern.
+      **Shipped in 1.11** (2026-09-11): opened from a new "Manage Projects..." button
+      in Settings; add/edit/remove with validation, including the 1.10 `exclude`
+      field; closing it refreshes the main dropdown, keeping the active target
+      selected by path through a rename. See `notes/notes_015.txt`. **Closes out
+      batch 2 (1.8-1.11)** — live-test checkpoint next.
 - [x] Regenerate a single output file instead of always running all three.
       **Shipped in 1.7** (2026-09-11): "Files to generate:" checkboxes
       (`agents.md` / `bug_hunter.md` / `enhancement_agent.md`, all checked by

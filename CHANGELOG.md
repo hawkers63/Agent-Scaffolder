@@ -4,6 +4,23 @@
 
 Nothing yet.
 
+## 1.11 — 2026-09-11
+
+Batch-2 feature work, fourth and final release (see `notes/notes_015.txt`).
+
+- **In-app Project Manager.** Settings gained a "Manage Projects..." button
+  opening a compact window to add, edit (including rename), and remove
+  `projects.json` shortcuts without hand-editing the file — including
+  setting the same optional `exclude` field added in 1.10. Validates name
+  (non-empty, not `Other...`, unique) and path (non-empty) before saving;
+  each add/edit/remove writes to `projects.json` immediately. Closing the
+  manager refreshes the main window's project dropdown, keeping the
+  currently active target directory selected by path (so a rename follows
+  it) rather than resetting to whatever was last saved on disk.
+
+This closes out batch 2 (1.8-1.11). Live-test checkpoint next, covering
+everything in this batch with real Repomix + Anthropic calls.
+
 ## 1.10 — 2026-09-11
 
 Batch-2 feature work, third release (see `notes/notes_014.txt`).

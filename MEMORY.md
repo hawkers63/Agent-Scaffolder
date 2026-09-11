@@ -19,10 +19,10 @@ and are now the dev-instructions the maintainer follows when working on the tool
 itself (see `CONTRIBUTING.md`).
 
 ## Current version
-**1.10** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
-Batch 2 (1.8-1.11) in progress; verified by source review + `py_compile` +
-targeted isolated tests only (no live Repomix/Anthropic call yet - that's
-deferred to batch 2's checkpoint after 1.11).
+**1.11** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
+**Batch 2 (1.8-1.11) complete**; verified by source review + `py_compile` +
+targeted isolated/zero-cost tests only. Live-test checkpoint (real
+Repomix/Anthropic calls) is the next thing to do, before batch 3 starts.
 1.3-1.7 (batch 1) were live-verified together on 2026-09-11 (`notes/notes_011.txt`)
 - no bugs found. 1.0/1.1/1.2 were each live-verified individually
 (`notes/notes_004.txt`, `notes/notes_005.txt`). Tags exist through `v1.7`, pushed
@@ -105,7 +105,12 @@ fourth time without a documented reason to retry. See `notes/notes_014.txt`.
 - `projects.json` / `last_project.json` are local, gitignored, user-editable while the
   app is closed. Since 1.10, a `projects.json` entry may also carry an optional
   `"exclude"` string (Repomix `--ignore` patterns) - only for named entries, not
-  `Other...`, since there's no persisted config for an ad-hoc folder.
+  `Other...`, since there's no persisted config for an ad-hoc folder. Since 1.11,
+  `projects.json` can also be edited live via Settings -> "Manage Projects..."
+  (`ProjectManagerWindow` + `save_projects()`) - the file is no longer purely
+  hand-edited-while-closed, though that still works too. Any code that mutates
+  the project list should go through `save_projects()` + `_valid_project_entries()`,
+  not a raw `json.dump`, to keep validation centralized.
 
 ## Known issues ledger (condensed — full detail in notes/notes_001.txt, notes_002.txt)
 **v1.1 fixes applied 2026-09-10 (not yet released/tagged)** — resolved:
@@ -330,3 +335,19 @@ design. Don't reintroduce them under a "polish" pass without confirming it's wan
   and the command-augmentation logic) plus source review; the
   `_selected_exclude_patterns()` lookup itself was confirmed working from
   output captured before the hang. See `notes/notes_014.txt`.
+- 2026-09-11: Implemented 1.11 (in-app Project Manager: new "Manage
+  Projects..." button in Settings opens `ProjectManagerWindow` to add/edit/
+  remove `projects.json` entries, including the `exclude` field; new
+  `save_projects()`; new `ScaffoldingApp.refresh_projects_list()` re-syncs
+  the main dropdown after the manager closes, keeping the active target
+  selected by path through a rename). This feature involves no threading or
+  subprocess at all, so the "don't patch Popen while driving mainloop with
+  a thread" rule doesn't apply - live-tested with the same safe
+  mainloop+after() pattern that worked in the batch-1 checkpoint, against a
+  temp `PROJECTS_FILE` (never touched the real one). **No hang this time** -
+  full CRUD + validation + main-window-refresh all passed cleanly on the
+  first attempt, which also supports the Popen-patching hang theory from
+  1.9/1.10. See `notes/notes_015.txt`. **This closes out batch 2
+  (1.8-1.11).** Next: the batch-2 live-test checkpoint (real Repomix +
+  Anthropic calls, no Popen patching) before batch 3 begins - per the
+  agreed cadence, don't skip it.

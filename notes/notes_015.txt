@@ -1,0 +1,101 @@
+AGENT SCAFFOLDER — IN-APP PROJECT MANAGER
+Date: 11 September 2026
+Report: notes_015.txt
+Predecessor: notes_014.txt (v1.10 exclusion passthrough)
+Author role: Feature development and UI/UX specialist
+
+1. PURPOSE
+Ship the ROADMAP v1.3-bucket item "Lightweight in-app project manager
+(add/edit/remove projects.json entries) as its own compact CTkToplevel,
+following the existing load/save JSON pattern." Fourth and final release
+of batch 2 (1.8-1.11).
+
+2. SCOPE DECISION
+Placed the entry point ("Manage Projects...") inside `SettingsWindow`
+rather than adding a new button to the main window, to keep the main
+520x340 window uncluttered - Settings is already where configuration-ish
+actions live (API key, model picker), and this is the same category of
+action. `SettingsWindow`'s height grew 340 -> 440 to fit the new button
+alongside the existing content (including the env-override note, which can
+appear at the same time).
+
+3. CHANGES
+- New module-level `save_projects(projects)`, mirroring the existing
+  `save_last_project_path`/`save_model_choice` pattern - writes the given
+  list straight to `projects.json`. `projects.json` remains hand-editable
+  too; this only overwrites it on an explicit add/edit/remove action from
+  the new UI.
+- New `ProjectManagerWindow(ctk.CTkToplevel)` class (after `SettingsWindow`,
+  before `ScaffoldingApp`): a `CTkScrollableFrame` listing current projects
+  (name, path, an "(exclude set)" marker, Edit/Remove buttons per row)
+  above a single add/edit form (Name, Path + Browse..., optional Exclude
+  patterns, Save/Add button, Clear button). One form serves both add and
+  edit - `_editing_name` tracks which existing entry (if any) Save Changes
+  will overwrite instead of appending a new one.
+- Validation on save: name non-empty and not `"Other..."`, path non-empty,
+  name unique (excluding the entry currently being edited, so renaming to
+  its own current name isn't flagged as a duplicate). Failures show a
+  `messagebox.showerror` and leave the form as-is rather than losing input.
+- Remove asks for confirmation via `messagebox.askyesno` before deleting -
+  a local, easily-reversible (re-addable) action, but still worth a
+  confirm given it's an explicit delete of a named shortcut.
+- Every add/edit/remove immediately re-validates the whole list through
+  the existing `_valid_project_entries()` before writing (defense in
+  depth - the UI's own validation should already guarantee well-formed
+  entries, but this guarantees `projects.json` never gets a malformed
+  write regardless).
+- `SettingsWindow.open_project_manager()`: opens `ProjectManagerWindow(self,
+  on_saved=main_app.refresh_projects_list)`, where `main_app` is
+  `self.master` (the `ScaffoldingApp` instance `SettingsWindow` was
+  constructed with).
+- New `ScaffoldingApp.refresh_projects_list()`: reloads `projects.json`,
+  updates the main dropdown's values, and re-selects the current target
+  directory **by path** (so a rename follows it correctly) rather than by
+  re-reading `last_project.json` from disk, which could be stale relative
+  to whatever's actually selected mid-session. Falls back to `Other...` if
+  the current path is no longer in any named entry, or to
+  `_restore_last_selection()` if there's somehow no current target at all.
+- APP_VERSION bumped to 1.11. CHANGELOG.md and ROADMAP.md updated. This
+  closes out batch 2 (1.8-1.11) entirely.
+
+4. VERIFICATION
+Learned from the three hangs in 1.9/1.10 (see notes_013/014.txt and
+MEMORY.md's "harness gotcha" notes): this feature involves **no threading
+and no subprocess at all** - it's pure widget CRUD on the main thread - so
+the documented hang pattern (mainloop + background thread + patched
+`Popen`) does not apply here. Used the same safe `app.mainloop()` +
+`app.after(...)`-scheduled-steps pattern that worked cleanly for all three
+tests in the batch-1 checkpoint, with `PROJECTS_FILE` redirected to a temp
+path (never touching the real `projects.json`) and `messagebox.showerror`/
+`askyesno` patched to no-op recorders purely to avoid a real blocking
+dialog if a validation-failure path fired - the validation logic itself
+was exercised for real, not bypassed.
+
+Result: **no hang, all pass.** Confirmed: empty-name and duplicate-name
+attempts both correctly show an error and don't write anything; adding a
+project with an exclude pattern round-trips through disk correctly
+(`load_projects()` after the add shows the new entry with `"exclude":
+"*.log"`); editing/renaming updates the entry in place (old name gone, new
+name present, exclude preserved); removing deletes it from disk; closing
+the manager refreshes the main window's `project_menu` values and
+re-selects the still-valid project by path. This also incidentally
+confirms the hang hypothesis from notes_013/014.txt: three consecutive
+hangs all involved patching `subprocess.Popen` while a background thread
+ran; this test involves neither, and ran clean on the first attempt.
+
+PASS: `python -m py_compile agent_scaffolder.py`.
+PASS: full CRUD + validation + main-window-refresh live test described
+above (zero cost - no Repomix/Anthropic calls).
+NOT DONE (deliberately, per the batched testing cadence): nothing - this
+feature has no live-API-cost-relevant surface, so there is nothing left
+that a real Repomix/Anthropic run would additionally confirm for this
+specific feature. The batch-2 checkpoint will still exercise the app
+end-to-end with real calls, covering the other three 1.8-1.11 features.
+
+5. FOLLOW-UP
+Batch 2's live-test checkpoint should now cover, with real Repomix/
+Anthropic calls (no Popen patching, per the standing rule): numbered
+output on a real regeneration, the exclusion pattern actually changing
+Repomix's packaged output, and (optionally) a real click-through of the
+Project Manager if a working desktop-automation tool becomes available -
+though the CRUD logic itself is already solidly verified here.
