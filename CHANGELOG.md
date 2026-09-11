@@ -4,6 +4,20 @@
 
 Nothing yet.
 
+## 1.10 — 2026-09-11
+
+Batch-2 feature work, third release (see `notes/notes_014.txt`).
+
+- **Optional Repomix exclusion passthrough.** A named `projects.json` entry
+  can now include an `"exclude"` field (comma-separated Repomix `--ignore`
+  patterns, e.g. `"*.log,node_modules/**"`); when set, it's passed straight
+  through to Repomix on top of the target's own `.gitignore` (which Repomix
+  already respects by default). Malformed values (wrong type, blank) are
+  dropped without rejecting the whole project entry. Not available for the
+  ad-hoc **Other…** folder picker, since there's no persisted config to
+  read a pattern from. README's project-config table and example JSON
+  updated.
+
 ## 1.9 — 2026-09-11
 
 Batch-2 feature work, second release (see `notes/notes_013.txt`).

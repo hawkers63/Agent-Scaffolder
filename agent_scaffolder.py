@@ -17,7 +17,7 @@ import anthropic
 import keyring
 from tkinter import filedialog, messagebox
 
-APP_VERSION = "1.9"
+APP_VERSION = "1.10"
 
 # Credential Manager service for Anthropic API key (never store keys in files)
 SERVICE_NAME = "AgentScaffolderApp"
@@ -84,7 +84,10 @@ def ensure_projects_file():
 
 
 def _valid_project_entries(data):
-    """Keep only well-formed {name, path} entries with non-empty, unique names."""
+    """Keep only well-formed {name, path} entries with non-empty, unique names.
+    An optional "exclude" string (Repomix --ignore patterns, comma-separated)
+    is kept if present and non-empty; a malformed exclude value is dropped
+    without rejecting the whole entry."""
     valid = []
     seen_names = set()
     for entry in data:
@@ -100,7 +103,11 @@ def _valid_project_entries(data):
         if name == OTHER_LABEL or name in seen_names:
             continue
         seen_names.add(name)
-        valid.append({"name": name, "path": path})
+        clean = {"name": name, "path": path}
+        exclude = entry.get("exclude")
+        if isinstance(exclude, str) and exclude.strip():
+            clean["exclude"] = exclude.strip()
+        valid.append(clean)
     return valid
 
 
@@ -468,6 +475,18 @@ class ScaffoldingApp(ctk.CTk):
             name = safe_folder_name(choice)
         return os.path.join(OUTPUT_ROOT, name)
 
+    def _selected_exclude_patterns(self):
+        """Repomix --ignore patterns from the current named project's optional
+        "exclude" field in projects.json. None for Other... (no persisted
+        config to read one from) or if the field isn't set."""
+        choice = self.project_menu.get()
+        if choice == OTHER_LABEL:
+            return None
+        for p in self.projects:
+            if p["name"] == choice:
+                return p.get("exclude")
+        return None
+
     def has_api_key(self):
         try:
             return bool(keyring.get_password(SERVICE_NAME, ACCOUNT_NAME))
@@ -530,6 +549,7 @@ class ScaffoldingApp(ctk.CTk):
         # target_dir, project_menu, or the file checkboxes again once it starts.
         target_dir = self.target_dir
         output_dir = self._output_folder_for_selection()
+        exclude_patterns = self._selected_exclude_patterns()
         self._job_running = True
         self._cancel_requested = False
         self.configure(cursor="wait")
@@ -542,7 +562,7 @@ class ScaffoldingApp(ctk.CTk):
         self.update_status("Packaging codebase with Repomix...")
         threading.Thread(
             target=self.run_scaffolding,
-            args=(target_dir, output_dir, selected_files),
+            args=(target_dir, output_dir, selected_files, exclude_patterns),
             daemon=True,
         ).start()
 
@@ -601,7 +621,7 @@ class ScaffoldingApp(ctk.CTk):
             env["PATH"] = os.pathsep.join(path_parts) + os.pathsep + env.get("PATH", "")
         return env
 
-    def run_scaffolding(self, target_dir, output_dir, selected_files):
+    def run_scaffolding(self, target_dir, output_dir, selected_files, exclude_patterns):
         # Unique per-run temp XML under APP_DIR so concurrent instances don't collide,
         # and everything below (including the keyring read) sits inside one
         # try/finally so any failure still re-enables the UI.
@@ -623,19 +643,19 @@ class ScaffoldingApp(ctk.CTk):
             # Popen (not run) so cancel_generation() can terminate it from the UI thread.
             # Note: in the shell=True fallback, terminate() only kills the cmd.exe
             # wrapper, not a repomix process it may have spawned underneath.
+            # exclude_patterns (projects.json's optional per-project "exclude" field)
+            # is passed straight through as Repomix's own --ignore patterns, on top
+            # of the target's own .gitignore, which Repomix already respects by default.
             if repomix_bin:
-                proc = subprocess.Popen(
-                    [repomix_bin, "--style", "xml", "--output", xml_path, "--quiet"],
-                    cwd=target_dir,
-                    env=env,
-                )
+                cmd = [repomix_bin, "--style", "xml", "--output", xml_path, "--quiet"]
+                if exclude_patterns:
+                    cmd += ["--ignore", exclude_patterns]
+                proc = subprocess.Popen(cmd, cwd=target_dir, env=env)
             else:
-                proc = subprocess.Popen(
-                    f'repomix --style xml --output "{xml_path}" --quiet',
-                    cwd=target_dir,
-                    env=env,
-                    shell=True,
-                )
+                cmd = f'repomix --style xml --output "{xml_path}" --quiet'
+                if exclude_patterns:
+                    cmd += f' --ignore "{exclude_patterns}"'
+                proc = subprocess.Popen(cmd, cwd=target_dir, env=env, shell=True)
             self._current_process = proc
             try:
                 returncode = proc.wait(timeout=REPOMIX_TIMEOUT_SECONDS)

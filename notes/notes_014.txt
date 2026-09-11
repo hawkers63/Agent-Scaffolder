@@ -1,0 +1,115 @@
+AGENT SCAFFOLDER — OPTIONAL REPOMIX EXCLUSION PASSTHROUGH
+Date: 11 September 2026
+Report: notes_014.txt
+Predecessor: notes_013.txt (v1.9 bounded subprocess timeout)
+Author role: Feature development and UI/UX specialist
+
+1. PURPOSE
+Ship the ROADMAP v1.3-bucket item "Optional Repomix exclusion passthrough
+so a target project's own excludes are respected." Third release of
+batch 2 (1.8-1.11).
+
+2. SCOPE DECISION
+Repomix already respects a target project's own `.gitignore` by default
+(confirmed via `repomix --help`: gitignore filtering is on unless
+`--no-gitignore` is passed, which this app never passes). What the README
+warning actually flags is different: *this checkout's* `.gitignore`
+protects nothing for *other* target projects being packaged - each target
+needs its own adequate ignore rules, or a way to add more from here.
+Scoped this narrowly to a per-project passthrough of Repomix's own
+`--ignore` flag via an optional `projects.json` field, rather than adding
+new UI (a text-entry widget, an "Other..." exclude option, etc.) - keeps
+the change to config + one CLI flag, consistent with the compact-utility
+design philosophy and the existing `projects.json`-is-user-editable
+pattern, without inventing new interaction surface that wasn't asked for.
+Deliberately not available for the ad-hoc **Other…** picker, since there's
+no persisted config to read a pattern from for an arbitrary folder.
+
+3. CHANGES
+- agent_scaffolder.py: `_valid_project_entries` now also keeps an optional
+  `"exclude"` string field per entry (Repomix `--ignore`-style
+  comma-separated patterns) if it's a non-empty string; a wrong-typed or
+  blank value is dropped without rejecting the whole project entry, same
+  resilience pattern as the existing name/path validation.
+- New `ScaffoldingApp._selected_exclude_patterns()`: looks up the current
+  named project's `exclude` field from `self.projects`; returns `None` for
+  `Other...` or if unset.
+- `start_generation()` snapshots `exclude_patterns` on the UI thread (same
+  pattern as `target_dir`/`output_dir`/`selected_files`) and passes it into
+  the worker thread; `run_scaffolding` gained a fourth parameter.
+- Repomix command construction: `cmd += ["--ignore", exclude_patterns]` (or
+  the shell=True fallback's string equivalent) when `exclude_patterns` is
+  truthy, on both the direct-binary and shell=True code paths.
+- README: project-config table, example `projects.json`, and the
+  generation-cost/privacy warning paragraph all updated to document
+  `"exclude"` and point at it as the fix for the previously-flagged gap.
+- APP_VERSION bumped to 1.10. CHANGELOG.md and ROADMAP.md updated.
+
+4. VERIFICATION - THIRD LIVE-GUI HANG, METHOD CHANGE (read before repeating)
+First attempt again drove the real `ScaffoldingApp` via `app.mainloop()`,
+this time also monkeypatching `subprocess.Popen` to capture the
+constructed Repomix command instead of letting it run, then calling
+`cancel_generation()` immediately (the same zero-cost pattern that worked
+cleanly three times in the batch-1 checkpoint, with no Popen patching
+there). **This hung the Windows process a third time** - unlike the first
+v1.9 hang (a real blocking `messagebox` dialog, understood) and the second
+v1.9 hang (undiagnosed "Not Responding" GUI deadlock), this one showed
+`Responding: True` yet made no further progress, and critically the target
+output directory (`Desktop/Agent Outputs/ExcludeTestProject`) was never
+even created - meaning the hang happened *before* `os.makedirs`, earlier in
+`run_scaffolding` than either prior hang. Killed the stuck process;
+confirmed no orphan processes, no output-folder side effects, and
+`projects.json` on disk untouched (the test only appended to the in-memory
+`app.projects` list, never wrote to the file - there is no
+`save_projects()` function in this app; `projects.json` is user-edited
+only).
+
+Pattern across all three hangs this session: every one involved a live
+`app.mainloop()` + background worker thread *combined with* a
+monkeypatched `subprocess.Popen`. The batch-1 checkpoint's three live tests
+(including its own cancel-immediately test) never patched `Popen` - they
+ran the real Repomix binary - and none of them hung. This is a strong
+enough correlation to treat as a firm rule rather than a coincidence:
+**do not monkeypatch `subprocess.Popen` while driving a live
+`app.mainloop()` with a background thread in this environment.** Recorded
+in MEMORY.md as an operational note. Root cause not conclusively
+identified (candidates: some interaction between patching a
+process-global attribute from the main thread while a second thread is
+mid-creation of a real OS process, GIL/scheduling interaction, or
+something specific to this Windows Python build) - not worth further
+live experimentation to pin down given three reproductions and a
+functioning workaround.
+
+Verification actually used (all zero-cost, no Tk, no hang risk):
+- `_valid_project_entries`: fed four synthetic entries (good exclude,
+  blank exclude, wrong-type exclude, no exclude field) directly to the
+  real function with no app instance involved. Confirmed: valid pattern
+  kept verbatim, blank dropped, non-string dropped, absent stays absent.
+- Command augmentation: replicated the exact `if exclude_patterns: cmd +=
+  ["--ignore", exclude_patterns]` logic standalone against three inputs
+  (a pattern, `None`, empty string) and confirmed `--ignore` appears only
+  for the truthy pattern case.
+- `_selected_exclude_patterns()` itself (the lookup against `self.projects`
+  by `project_menu.get()`) was exercised successfully in the aborted live
+  test *before* it hung - the injected test project's exclude value round-
+  tripped correctly through a real `ScaffoldingApp` instance. That part of
+  the output survived (unbuffered stdout) even though the run never
+  finished, so it counts as a real pass, not just a pure-function test.
+- Source review of the actual wiring in `run_scaffolding` (the two-line
+  `cmd +=` change on each of the two Popen branches) against the working
+  three-argument-to-four-argument threading change.
+
+5. RESULT
+PASS on all of the above. No live end-to-end confirmation that a real
+Repomix invocation with `--ignore` set actually excludes the intended
+files from its own output - that specific claim rests on Repomix's own
+documented `--ignore` behavior (`repomix --help`) plus this app correctly
+constructing and passing the flag, not on this app doing anything unusual
+with it. Deferred to batch 2's live-test checkpoint after 1.11, using the
+real repomix binary (no Popen patching, per the rule above).
+
+6. FOLLOW-UP
+Batch 2's checkpoint script should include a real generation against a
+project with an `"exclude"` pattern that would visibly change the packaged
+output (e.g., excluding a file this app's own `agents.md` output normally
+references) to close this gap with a real live confirmation.

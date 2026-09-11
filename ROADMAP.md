@@ -135,9 +135,12 @@ memory and only hit disk after all three requests succeed, which resolves the re
       5-minute `REPOMIX_TIMEOUT_SECONDS` ceiling; on expiry, terminate() with
       a kill() fallback, then a clear `ScaffoldingError` before any Anthropic
       call. See `notes/notes_013.txt`.
-- [ ] Optional Repomix exclusion passthrough so a target project's own excludes are
-      respected (README already warns this checkout's `.gitignore` doesn't protect
-      other target projects).
+- [x] Optional Repomix exclusion passthrough. **Shipped in 1.10** (2026-09-11):
+      a named `projects.json` entry can carry an `"exclude"` field
+      (comma-separated `--ignore` patterns), passed straight through to
+      Repomix on top of the target's own `.gitignore` (already respected by
+      default). Not available for **Other…** (no persisted config to read
+      from). See `notes/notes_014.txt`.
 - [x] **Numbered output instead of overwrite** (explicit user request, 2026-09-11).
       **Shipped in 1.8** (2026-09-11): first generation keeps the plain filename;
       each later one gets the next free `_N` suffix, counted independently per

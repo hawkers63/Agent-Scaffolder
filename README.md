@@ -75,23 +75,31 @@ This is a mouse-driven CustomTkinter UI (project menu, Generate, Settings). Ther
 
 | File / setting | Purpose | Tracked in Git? |
 | --- | --- | --- |
-| `projects.json` | List of `{ "name", "path" }` shortcuts | No (gitignored) |
+| `projects.json` | List of `{ "name", "path", "exclude"? }` shortcuts | No (gitignored) |
 | `projects.example.json` | Clean template for local shortcuts | Yes |
 | `last_project.json` | Remembers last selection | No |
 | `model_choice.json` | Last Settings model id | No |
 | Windows keyring | API key under service `AgentScaffolderApp`, account `AnthropicAPIKey` | N/A (OS store) |
 | `AGENT_SCAFFOLDER_MODEL` | Env override; disables the Settings picker when set | N/A |
 
-Example `projects.json` (edit while the app is closed):
+Example `projects.json` (edit while the app is closed). The optional
+`"exclude"` field is a comma-separated list of Repomix `--ignore` patterns,
+passed through on top of the target's own `.gitignore` (which Repomix
+already respects by default) — useful when a project's `.gitignore` doesn't
+cover everything you want kept out of the packaged context:
 
 ```json
 [
   {
     "name": "Example Project",
-    "path": "D:\\Projects\\ExampleProject"
+    "path": "D:\\Projects\\ExampleProject",
+    "exclude": "*.log,node_modules/**"
   }
 ]
 ```
+
+`exclude` isn't available for the **Other…** folder picker, since there's no
+persisted config to read a pattern from — only named `projects.json` entries.
 
 Model resolution order: `AGENT_SCAFFOLDER_MODEL` env var → Settings choice → `DEFAULT_MODEL` (`claude-sonnet-5`).
 
@@ -116,7 +124,7 @@ Repomix writes a temporary `.repomix-context-<random>.xml` under the app directo
 
 ## Model and data handling
 
-Generation sends the selected repository’s packaged source to Anthropic in three sequential requests and can incur API charges. Review the target project’s Repomix exclusions before generation; this checkout’s `.gitignore` does not protect other target projects. Do not rely on packaging alone to remove sensitive content.
+Generation sends the selected repository’s packaged source to Anthropic in up to three sequential requests (fewer if you uncheck files) and can incur API charges. Review the target project’s Repomix exclusions before generation; this checkout’s `.gitignore` does not protect other target projects — add an `"exclude"` field to that project's `projects.json` entry if its own `.gitignore` doesn't cover everything. Do not rely on packaging alone to remove sensitive content.
 
 Displayed Settings prices (per 1M tokens, input/output, display-only): Haiku 4.5 ≈ $1/$5 · Sonnet 5 ≈ $2/$10 · Opus 5 ≈ $5/$25. A cheaper model may write shallower instructions for a large codebase.
 

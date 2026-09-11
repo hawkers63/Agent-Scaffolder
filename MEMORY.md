@@ -19,7 +19,7 @@ and are now the dev-instructions the maintainer follows when working on the tool
 itself (see `CONTRIBUTING.md`).
 
 ## Current version
-**1.9** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
+**1.10** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
 Batch 2 (1.8-1.11) in progress; verified by source review + `py_compile` +
 targeted isolated tests only (no live Repomix/Anthropic call yet - that's
 deferred to batch 2's checkpoint after 1.11).
@@ -64,6 +64,21 @@ exact same mechanism (the 1.9 Repomix timeout), prefer an isolated
 non-Tk script proving the mechanism itself over a second live-GUI attempt -
 it gets equivalent confidence without the hang risk. See `notes/notes_013.txt`.
 
+**Third harness gotcha (2026-09-11, v1.10 attempt) - now a firm rule:** a
+third live-GUI attempt hung the process again, this time monkeypatching
+`subprocess.Popen` while driving `app.mainloop()` with a background worker
+thread (to capture the constructed Repomix command instead of letting it
+run). All three hangs this session share that exact combination; the
+batch-1 checkpoint's three live tests never patched `Popen` (real repomix
+ran) and none of them hung. **Do not monkeypatch `subprocess.Popen` while
+driving a live `app.mainloop()` with a background thread in this
+environment** - root cause not pinned down, but reproduced 3x. For
+anything touching the Repomix subprocess call, either (a) let it run for
+real against the real binary (safe, as batch-1 proved), or (b) test the
+surrounding logic as a pure non-Tk function/script with no `app.mainloop()`
+involved at all. Don't combine "patch Popen" with "drive mainloop" a
+fourth time without a documented reason to retry. See `notes/notes_014.txt`.
+
 ## Architecture invariants — do not break these without an explicit request
 - Single-file app (`agent_scaffolder.py`). No module split.
 - CustomTkinter only; `pack()` layout only (no grid/place, no ttk, no Tk StringVar/BooleanVar).
@@ -88,7 +103,9 @@ it gets equivalent confidence without the hang risk. See `notes/notes_013.txt`.
   filename, later ones get the next free `_N` suffix per file (`_next_available_path`).
   Don't reintroduce overwrite-in-place without an explicit request.
 - `projects.json` / `last_project.json` are local, gitignored, user-editable while the
-  app is closed.
+  app is closed. Since 1.10, a `projects.json` entry may also carry an optional
+  `"exclude"` string (Repomix `--ignore` patterns) - only for named entries, not
+  `Other...`, since there's no persisted config for an ad-hoc folder.
 
 ## Known issues ledger (condensed — full detail in notes/notes_001.txt, notes_002.txt)
 **v1.1 fixes applied 2026-09-10 (not yet released/tagged)** — resolved:
@@ -301,3 +318,15 @@ design. Don't reintroduce them under a "polish" pass without confirming it's wan
   isolated non-Tk subprocess test of the exact timeout/terminate/kill
   mechanism instead, which passed cleanly, plus source review of the
   small wiring change. See `notes/notes_013.txt`.
+- 2026-09-11: Implemented 1.10 (optional Repomix exclusion passthrough via
+  a new `"exclude"` field on `projects.json` entries, passed through as
+  Repomix's own `--ignore` flag; not available for `Other...`). A third
+  live-GUI verification attempt hung the process again - this time
+  monkeypatching `subprocess.Popen` while driving `app.mainloop()` (see
+  "Third harness gotcha" above, now a firm rule). Killed the stuck process;
+  confirmed no side effects (`projects.json` untouched, no stray output
+  folder created - the hang happened before `os.makedirs` even ran).
+  Verified instead via pure non-Tk function calls (`_valid_project_entries`
+  and the command-augmentation logic) plus source review; the
+  `_selected_exclude_patterns()` lookup itself was confirmed working from
+  output captured before the hang. See `notes/notes_014.txt`.
