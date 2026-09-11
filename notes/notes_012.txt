@@ -1,0 +1,73 @@
+AGENT SCAFFOLDER — NUMBERED OUTPUT INSTEAD OF OVERWRITE
+Date: 11 September 2026
+Report: notes_012.txt
+Predecessor: notes_011.txt (batch-1 live-test checkpoint)
+Author role: Feature development and UI/UX specialist
+
+1. PURPOSE
+Ship the explicit user request made mid-way through the batch-1 checkpoint:
+"Rather than overwriting and amending agents.md, I'd prefer to increment
+the filename with a number, saving it as agents_2.md and so on." First
+release of batch 2 (1.8-1.11, per ROADMAP.md "Testing cadence").
+
+2. DESIGN DECISION
+ROADMAP.md had flagged this as needing a decision between a per-file
+counter and one shared run number across all three files. The user's own
+wording ("agents_2.md and so on") already answers this: per-file, not a
+shared run number. No separate design round was needed - implemented
+directly as stated.
+
+3. CHANGES
+- agent_scaffolder.py: new `_next_available_path(directory, filename)`
+  helper (module level, next to `safe_folder_name`). Splits the filename
+  into base/ext, returns the plain path if it doesn't exist yet, otherwise
+  walks `_2`, `_3`, ... until it finds a free slot. Deliberately fills the
+  lowest free gap rather than always incrementing past the highest number
+  that ever existed (verified: creating `agents_5.md` by hand doesn't stop
+  the next real write from claiming `agents_3.md` if that's still free) -
+  self-healing if a numbered file is deleted, and simpler than tracking a
+  separate "last used number" anywhere.
+- `run_scaffolding`'s file-write loop now calls
+  `_next_available_path(output_dir, name)` per file instead of always
+  `os.path.join(output_dir, name)`, and collects the actual paths written
+  into `written_paths` (previously the loop didn't track output paths at
+  all, only the `generated` dict of name -> text).
+- Completion message rebuilt from `written_paths` instead of `generated`:
+  now reads e.g. "Agent scaffolding complete! (1 file: agents_2.md)\nOutput:
+  ..." - naming the actual file(s) written, since they're no longer
+  predictable from the checkboxes alone once numbering kicks in.
+- No pruning/cap on how high the numbers go - not requested, and capping
+  or auto-deleting old generations would work against the entire point of
+  this feature (never destroying a working set of instructions). If disk
+  usage or clutter becomes a real problem later, that's a separate,
+  explicitly-scoped feature.
+- APP_VERSION bumped to 1.8. CHANGELOG.md and ROADMAP.md updated.
+
+4. VERIFICATION
+PASS: `python -m py_compile agent_scaffolder.py`.
+PASS: Direct interactive test of `_next_available_path` against a real
+temp directory (zero API/Repomix cost, pure function): first call for
+`agents.md` returns the plain name; after creating that file, the next
+call returns `agents_2.md`; independent counter confirmed for
+`bug_hunter.md` (returns the plain name even though `agents.md` and
+`agents_2.md` already exist); gap-filling confirmed (manually creating
+`agents_5.md` without creating `agents_3.md` first still returns
+`agents_3.md` on the next call, not `agents_6.md`).
+PASS: Source review of the write loop and completion-message changes
+against the existing staged-writes design (`generated` dict is still built
+and validated exactly as before; only where and how it's written to disk
+changed) and against v1.7's per-file selection (confirmed the two features
+compose correctly: selecting only `agents.md` and running it repeatedly
+only advances `agents.md`'s counter, `bug_hunter.md`/`enhancement_agent.md`
+stay at whatever number they were last written at).
+NOT DONE (deliberately, per the batched testing cadence - this is a
+code-only release, checkpoint is after 1.11): a live run confirming the
+actual numbered file appears on disk with correct content end-to-end
+against a real Anthropic response, and that the completion message /
+Explorer-opened folder correctly show the new numbered filename to a real
+user. Deferred to the next batch's live-test checkpoint.
+
+5. FOLLOW-UP
+None identified yet. If a future request wants a cap, a "clean up old
+generations" action, or a way to see version history in-app, that's new
+scope, not an extension of this change.

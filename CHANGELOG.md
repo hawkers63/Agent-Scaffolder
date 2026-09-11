@@ -4,6 +4,27 @@
 
 Nothing yet.
 
+## 1.8 — 2026-09-11
+
+Batch-2 feature work, first release (see `notes/notes_012.txt`).
+
+- **Numbered output instead of silent overwrite** (explicit user request):
+  a fresh generation no longer overwrites `agents.md` / `bug_hunter.md` /
+  `enhancement_agent.md` in place. The first-ever generation for a project
+  still writes the plain filename; every later generation writes the next
+  free numbered variant instead (`agents_2.md`, `agents_3.md`, ...) so a
+  bad or unwanted regeneration never destroys a working set of
+  instructions. Counted independently per file (matches v1.7's per-file
+  selection: regenerating only `agents.md` five times produces
+  `agents.md`, `agents_2.md`, ... `agents_5.md` while `bug_hunter.md`
+  stays untouched at its original name). Fills the lowest free gap rather
+  than always incrementing past the highest number that ever existed, so
+  deleting a numbered file frees its slot again. Numbers grow unbounded —
+  no automatic pruning of old generations (not requested; would need its
+  own design if wanted later). The completion status now lists the actual
+  filenames written, since they're no longer predictable from the
+  checkboxes alone.
+
 ## 1.7 — 2026-09-11
 
 Batch-1 feature work, final release of this batch (see `notes/notes_010.txt`).

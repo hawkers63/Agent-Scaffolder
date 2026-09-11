@@ -19,14 +19,14 @@ and are now the dev-instructions the maintainer follows when working on the tool
 itself (see `CONTRIBUTING.md`).
 
 ## Current version
-**1.7** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
-1.3-1.7 shipped on source review + `py_compile` only, per the batched testing
-cadence adopted this session, then **live-verified together as a batch on
-2026-09-11** (real Repomix + real Anthropic/Haiku-4.5 calls; see
-`notes/notes_011.txt`) — no bugs found, no fix release needed. 1.0/1.1/1.2 were
-each live-verified individually (`notes/notes_004.txt`, `notes/notes_005.txt`);
-tags exist through `v1.2`, with `v1.3`-`v1.7` tagged/pushed this session per
-explicit request (see session log).
+**1.8** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
+First release of batch 2 (1.8-1.11); verified by source review + `py_compile` +
+a direct interactive check of the new pure helper function only (no live
+Repomix/Anthropic call yet - that's deferred to batch 2's checkpoint after 1.11).
+1.3-1.7 (batch 1) were live-verified together on 2026-09-11 (`notes/notes_011.txt`)
+- no bugs found. 1.0/1.1/1.2 were each live-verified individually
+(`notes/notes_004.txt`, `notes/notes_005.txt`). Tags exist through `v1.7`, pushed
+2026-09-11 per explicit request.
 
 ## Testing cadence (adopted 2026-09-11)
 Real Anthropic API calls and real Repomix runs cost real money per execution.
@@ -71,6 +71,9 @@ inferring them from files written).
   no-Tk-variable-bindings rule. Any new per-file toggle should extend this dict
   rather than adding separate widgets/state (added 1.7).
 - Output contract: `Desktop/Agent Outputs/<project>` — do not relocate without being asked.
+  Since 1.8, files there are never overwritten: first generation keeps the plain
+  filename, later ones get the next free `_N` suffix per file (`_next_available_path`).
+  Don't reintroduce overwrite-in-place without an explicit request.
 - `projects.json` / `last_project.json` are local, gitignored, user-editable while the
   app is closed.
 
@@ -262,5 +265,17 @@ design. Don't reintroduce them under a "polish" pass without confirming it's wan
   queued in ROADMAP.md's v1.3 feature-expansion bucket rather than folded into
   the checkpoint, since changing the write contract mid-verification would
   have invalidated the very test being run. Tagged and pushed `v1.3`-`v1.7`
-  to `origin` this session per the user's explicit "push afterwards" — see
-  below for confirmation once done.
+  to `origin` this session per the user's explicit "push afterwards" —
+  confirmed pushed (README Release table updated to v1.7 in the same commit).
+- 2026-09-11: Started batch 2 (user said "let's continue"). Fixed a stale
+  ROADMAP.md line that still said "Current version: 1.3" (never updated
+  across 1.4-1.7). Implemented 1.8 (numbered output instead of overwrite,
+  per the user's mid-checkpoint request): new `_next_available_path()`
+  helper, per-file independent counter, lowest-free-gap semantics,
+  completion message now names the actual file(s) written. Verified via
+  `py_compile` + a direct interactive test of the helper against a real
+  temp directory (zero cost, pure function) — no live Repomix/Anthropic run
+  yet, per the cadence (checkpoint is after 1.11). See `notes/notes_012.txt`.
+  Batch 2 plan: 1.8 (done) -> 1.9 bounded Repomix subprocess timeout ->
+  1.10 exclusion passthrough -> 1.11 in-app project manager -> live-test
+  checkpoint.

@@ -17,7 +17,7 @@ import anthropic
 import keyring
 from tkinter import filedialog, messagebox
 
-APP_VERSION = "1.7"
+APP_VERSION = "1.8"
 
 # Credential Manager service for Anthropic API key (never store keys in files)
 SERVICE_NAME = "AgentScaffolderApp"
@@ -170,6 +170,22 @@ def safe_folder_name(name):
     cleaned = "".join(c if (c.isalnum() or c in (" ", "-", "_")) else "_" for c in name)
     cleaned = " ".join(cleaned.split()).strip(" ._")
     return cleaned or "Project"
+
+
+def _next_available_path(directory, filename):
+    """First run keeps the plain filename; each later run for the same file
+    gets the next free _N suffix (agents.md, agents_2.md, agents_3.md, ...),
+    so a fresh generation never overwrites a previous one."""
+    candidate = os.path.join(directory, filename)
+    if not os.path.exists(candidate):
+        return candidate
+    base, ext = os.path.splitext(filename)
+    n = 2
+    while True:
+        candidate = os.path.join(directory, f"{base}_{n}{ext}")
+        if not os.path.exists(candidate):
+            return candidate
+        n += 1
 
 
 def _extract_text_response(response, agent_name):
@@ -690,14 +706,20 @@ class ScaffoldingApp(ctk.CTk):
                 raise GenerationCancelled()
 
             self.update_status("Writing generated files...")
+            written_paths = []
             for name, text in generated.items():
-                out_path = os.path.join(output_dir, name)
+                out_path = _next_available_path(output_dir, name)
                 with open(out_path, "w", encoding="utf-8") as out_file:
                     out_file.write(text)
+                written_paths.append(out_path)
 
-            count = len(generated)
+            count = len(written_paths)
             file_word = "file" if count == 1 else "files"
-            done_msg = f"Agent scaffolding complete! ({count} {file_word})\nOutput: {output_dir}"
+            written_names = ", ".join(os.path.basename(p) for p in written_paths)
+            done_msg = (
+                f"Agent scaffolding complete! ({count} {file_word}: {written_names})\n"
+                f"Output: {output_dir}"
+            )
             self.update_status(done_msg)
             self.after(0, lambda d=output_dir: self._open_output_folder(d))
 

@@ -1,7 +1,7 @@
 # ROADMAP.md — Agent Scaffolder
 
-Current version: **1.3** (released 2026-09-11 — see `CHANGELOG.md` and
-`notes/notes_006.txt`; 1.2 icon/identity work remains in `notes/notes_005.txt`). This
+Current version: **1.7** (released 2026-09-11 — see `CHANGELOG.md` and
+`notes/notes_010.txt`; batch-1 live-test checkpoint in `notes/notes_011.txt`). This
 roadmap sequences the work identified in the maintainer's own review notes
 (`notes/notes_001.txt`, `notes/notes_002.txt`) plus ideas for turning this from a
 working utility into a more capable desktop application. Nothing here is committed
@@ -13,10 +13,14 @@ real Anthropic API calls) cost real money, so they're batched — five code-only
 releases verified by source review / compile checks only, then a live test
 pass, fixing whatever it finds, then repeat. Batch 1 was versions 1.3-1.7;
 its live-test checkpoint (2026-09-11, `notes/notes_011.txt`) found **no
-bugs**, so no separate "bugfix" release was needed — 1.8 is free for batch
-2's first real feature (see below). If a future checkpoint does find bugs,
-that fix work is what should occupy the next version number before batch
-2's five code-only releases begin.
+bugs**, so no separate "bugfix" release was needed. **Batch 2 is now
+underway: 1.8-1.11**, covering the remaining v1.3-bucket items below
+(numbered output, subprocess timeout, exclusion passthrough, project
+manager) — four items, not five; the backlog only had four well-scoped
+items ready to go, and forcing a fifth just for symmetry wasn't worth it.
+Live-test checkpoint after 1.11. If a future checkpoint does find bugs,
+that fix work is what should occupy the next version number before the
+following batch's code-only releases begin.
 
 ## v1.1 — Correctness & reliability (shipped)
 Both audits agree these are the changes that make current behaviour honest, before any
@@ -131,15 +135,12 @@ memory and only hit disk after all three requests succeed, which resolves the re
 - [ ] Optional Repomix exclusion passthrough so a target project's own excludes are
       respected (README already warns this checkout's `.gitignore` doesn't protect
       other target projects).
-- [ ] **Numbered output instead of overwrite** (explicit user request, 2026-09-11,
-      made mid-way through the batch-1 live-test checkpoint): instead of always
-      writing `agents.md` and silently overwriting a previous run, write
-      `agents_2.md`, `agents_3.md`, etc. when a lower-numbered file already exists,
-      so a bad generation doesn't destroy a working set of instructions. Supersedes
-      the vaguer "Generation history" idea in "Later" below now that there's a
-      concrete, requested shape for it. Needs a decision on exact numbering rule
-      (per-file counter vs. one shared run number across all three files) before
-      implementing.
+- [x] **Numbered output instead of overwrite** (explicit user request, 2026-09-11).
+      **Shipped in 1.8** (2026-09-11): first generation keeps the plain filename;
+      each later one gets the next free `_N` suffix, counted independently per
+      file, filling the lowest free gap. The user's own phrasing ("agents_2.md and
+      so on") settled the per-file-vs-shared-run-number question, so this shipped
+      without a separate design-decision round. See `notes/notes_012.txt`.
 
 ## Later / needs discussion
 Bigger bets — worth a decision before building:
