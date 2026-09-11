@@ -19,10 +19,11 @@ and are now the dev-instructions the maintainer follows when working on the tool
 itself (see `CONTRIBUTING.md`).
 
 ## Current version
-**1.11** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
-**Batch 2 (1.8-1.11) complete and live-verified** (real Repomix + Anthropic
-calls, 2026-09-11, `notes/notes_016.txt`) — no bugs found. Tags exist through
-`v1.11`, pushed 2026-09-11 per explicit request ("Go ahead").
+**1.12** — bumped 2026-09-11 (`APP_VERSION` in `agent_scaffolder.py`, `CHANGELOG.md`).
+Batch 2 (1.8-1.11) complete and live-verified (real Repomix + Anthropic calls,
+2026-09-11, `notes/notes_016.txt`) — no bugs found. Tags exist through `v1.11`,
+pushed 2026-09-11. 1.12 starts a new "Distributable build" track (see
+ROADMAP.md) - not committed/tagged/pushed yet this round.
 1.3-1.7 (batch 1) were live-verified together on 2026-09-11 (`notes/notes_011.txt`)
 - no bugs found. 1.0/1.1/1.2 were each live-verified individually
 (`notes/notes_004.txt`, `notes/notes_005.txt`). Tags exist through `v1.7`, pushed
@@ -152,6 +153,20 @@ Currently seeded to `claude-haiku-4-5` on this machine per the user's cost-consc
 development request — change any time via Settings. Full detail: ROADMAP.md "Since 1.1".
 **Note for future sessions:** "model/prompt picker UI" is no longer in the rejected
 list below — it shipped. Don't re-reject it if asked to extend it further.
+
+## Distributable build (decided 2026-09-11, in progress)
+User asked to discuss shipping a real `.exe`. Decided: PyInstaller (not
+Nuitka — better track record with CustomTkinter asset/theme loading and
+`keyring` backend discovery) producing a portable `.exe` that still expects
+Node.js + Repomix installed separately, with clear error guidance when
+missing, rather than bundling a full Node runtime (bigger/more complex/
+another thing to keep in sync). Full checklist and status: ROADMAP.md
+"Distributable build" section. First step shipped in 1.12: clear
+"install Node.js, then npm install -g repomix" error instead of a generic
+subprocess failure (`notes/notes_017.txt`). **Note for future sessions:**
+don't revisit fully-bundled Node without a real reason (the chosen
+pre-flight-and-guide approach turning out to be an actual adoption
+blocker) — that tradeoff was already discussed and decided.
 
 ## Explicitly rejected (per notes_002.txt) unless the user asks again
 Progress bar/spinner, grid()/place()/ttk/Qt/web UI, Tk variable bindings, a second
@@ -367,3 +382,15 @@ design. Don't reintroduce them under a "polish" pass without confirming it's wan
   extension. **No bugs found.** Pushed and tagged `v1.8`-`v1.11` to `origin`
   per the same authorization; README Release table updated to v1.11 in the
   same commit. See `notes/notes_016.txt`.
+- 2026-09-11: User asked to discuss the distributable-build ROADMAP item.
+  Recommended PyInstaller over Nuitka and flagged the Repomix/Node.js
+  dependency as the real decision point (fully bundle Node vs. pre-flight
+  + guide); presented via AskUserQuestion, user chose pre-flight + guide.
+  Recorded the decision in ROADMAP.md's new "Distributable build" section
+  and MEMORY.md's "Distributable build" section above. Implemented the
+  first step, 1.12 (clear Node.js/Repomix-missing error instead of a
+  generic subprocess failure) — verified via an isolated `shutil.which`
+  test with an empty PATH (simulates nothing installed) plus source
+  review; no live GUI test needed since this only changes a failure-path
+  message string. See `notes/notes_017.txt`. Not yet committed/tagged/
+  pushed this round.

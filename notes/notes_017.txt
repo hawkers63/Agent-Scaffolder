@@ -1,0 +1,85 @@
+AGENT SCAFFOLDER — CLEAR ERROR WHEN REPOMIX/NODE.JS IS MISSING
+Date: 11 September 2026
+Report: notes_017.txt
+Predecessor: notes_016.txt (batch-2 live-test checkpoint)
+Author role: Feature development and UI/UX specialist
+
+1. PURPOSE
+First step of the "Distributable build" track (ROADMAP.md, decided
+2026-09-11 after discussion with the user): before packaging a real
+`.exe`, make the failure mode for "Repomix/Node.js isn't installed" clear
+instead of cryptic, since a distributed `.exe` will be run by people whose
+machines may not have Node.js at all - today's error ("Repomix failed:
+Command 'repomix' returned non-zero exit status 1.") gives no indication
+of what to actually do about it.
+
+2. DISCUSSION OUTCOME (context for future sessions)
+User asked to discuss the distributable-build option. Recommended
+PyInstaller over Nuitka (better track record with CustomTkinter's asset/
+theme loading and keyring's backend discovery - both known Nuitka trouble
+spots) and flagged the one real fork in the road: how to handle the
+Repomix/Node.js dependency, which packaging doesn't make disappear.
+Presented two options - fully bundle a portable Node runtime + repomix
+(zero-prerequisite but bigger/more complex/another thing to keep in sync),
+or ship a real portable `.exe` that still expects Node.js + repomix
+installed separately, with clear guidance when missing (much less work).
+User chose the latter via AskUserQuestion. This is now recorded in
+ROADMAP.md's new "Distributable build" section as the standing decision -
+don't revisit fully-bundled Node without a real reason (e.g., the
+pre-flight-and-guide approach turning out to be an actual adoption
+blocker).
+
+3. CHANGES
+- agent_scaffolder.py: when Repomix's subprocess exits non-zero
+  (`returncode != 0`, existing check), the code now additionally checks
+  `shutil.which("node", ...)` / `shutil.which("npx", ...)` (using the same
+  `env["PATH"]` already built by `_build_subprocess_env()`) alongside the
+  existing `repomix_bin` lookup, and raises one of two specific
+  `ScaffoldingError` messages instead of the generic `CalledProcessError`:
+  - Neither Node.js nor Repomix found: "Repomix could not run because
+    Node.js doesn't appear to be installed. Install Node.js from
+    nodejs.org, then run \"npm install -g repomix\" in a terminal and try
+    again."
+  - Node.js found but Repomix itself wasn't: "Repomix could not run. Node.js
+    was found, but the \"repomix\" package doesn't appear to be installed.
+    Run \"npm install -g repomix\" in a terminal and try again."
+  - Otherwise (both found, so this is a genuine Repomix/project-specific
+    failure, not a missing-dependency problem): falls through to the
+    existing generic `CalledProcessError`, unchanged.
+- This only changes what happens on failure. The success path (Repomix
+  found, ran, exited 0) is completely unchanged - no new checks run when
+  everything is working normally.
+- APP_VERSION bumped to 1.12. CHANGELOG.md and ROADMAP.md updated;
+  ROADMAP's "Distributable build" section created to track this and the
+  remaining PyInstaller-packaging work as its own line of work, separate
+  from the batch-1/batch-2 feature-expansion cadence (this track isn't
+  primarily about live-API-cost batching - most of its steps, including
+  this one, don't touch the Anthropic API at all).
+
+4. VERIFICATION
+PASS: `python -m py_compile agent_scaffolder.py`.
+PASS: isolated, zero-cost check of the exact detection logic - simulated a
+"nothing installed" machine via `shutil.which(..., path="")` (empty PATH
+means nothing is found anywhere) and confirmed both `repomix_bin` and the
+node/npx check correctly evaluate to "not found," which is exactly the
+condition driving the new error branches. Also confirmed against this
+real machine's actual PATH that `repomix`/`node` are still found
+correctly, proving the happy path is untouched.
+PASS: source review of the three-way branch (neither found / node-only /
+both-found-so-generic-error) against the existing `except ScaffoldingError`
+/ `except subprocess.CalledProcessError` handlers - both message strings
+route through the already-working `ScaffoldingError` -> `_show_error` path,
+no new exception type introduced.
+NOT DONE: a live test that actually uninstalls or hides Node.js/Repomix
+from this machine to trigger the real failure path end-to-end. Judged
+unnecessary and disruptive (temporarily breaking a working dev machine's
+Node/repomix install to test an error message) given the isolated
+`shutil.which` test already proves the exact condition logic that
+determines which branch fires.
+
+5. FOLLOW-UP
+Next step in the Distributable build track: set up the actual PyInstaller
+build (spec file or command with `--windowed`, `--icon`, CustomTkinter
+`--add-data`, keyring hidden-imports), produce a real `.exe`, and smoke-test
+it launches and generates correctly on this machine - see ROADMAP.md
+"Distributable build" section for the full remaining checklist.

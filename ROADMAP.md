@@ -1,7 +1,7 @@
 # ROADMAP.md — Agent Scaffolder
 
-Current version: **1.11** (released 2026-09-11 — see `CHANGELOG.md` and
-`notes/notes_015.txt`; batch-2 live-test checkpoint pending). This
+Current version: **1.12** (released 2026-09-11 — see `CHANGELOG.md` and
+`notes/notes_017.txt`; batch-2 live-verified in `notes/notes_016.txt`). This
 roadmap sequences the work identified in the maintainer's own review notes
 (`notes/notes_001.txt`, `notes/notes_002.txt`) plus ideas for turning this from a
 working utility into a more capable desktop application. Nothing here is committed
@@ -162,12 +162,35 @@ memory and only hit disk after all three requests succeed, which resolves the re
       so on") settled the per-file-vs-shared-run-number question, so this shipped
       without a separate design-decision round. See `notes/notes_012.txt`.
 
+## Distributable build (in progress, decided 2026-09-11)
+Goal: a real `.exe` so this stops being a checkout-and-run tool, without
+turning into an open-ended infra project. Decision made after discussion:
+PyInstaller (not Nuitka — better track record with CustomTkinter's asset/
+theme loading and `keyring`'s backend discovery) producing a portable
+`.exe` that still expects Node.js + Repomix installed separately, with
+clear guidance when they're missing, rather than bundling a full Node
+runtime (bigger, more build complexity, another thing to keep in sync).
+Revisit fully-bundled Node only if the pre-flight-and-guide approach turns
+out to be a real adoption blocker.
+- [x] Clear error when Repomix/Node.js is missing instead of a generic
+      subprocess failure. **Shipped in 1.12** (2026-09-11): checks whether
+      `node`/`npx` and `repomix` are findable on PATH when Repomix fails,
+      and shows actionable install guidance instead of "Command 'repomix'
+      returned non-zero exit status 1." See `notes/notes_017.txt`.
+- [ ] PyInstaller build config: `--windowed`, `--icon=icon/Agent.Scaffolder.ico`,
+      CustomTkinter asset bundling (`--add-data`), `keyring` Windows backend
+      hidden-import. Produce a real `.exe` and smoke-test it launches and
+      generates correctly on this machine.
+- [ ] README "Download" / build-from-source docs reflecting the new `.exe`
+      path alongside the existing checkout-and-run instructions.
+- [ ] Later, optional: a GitHub Actions release workflow that builds and
+      attaches the `.exe` to a GitHub Release on tag push (ties into the
+      existing README maintainer note "prefer creating a matching GitHub
+      Release"). Not started — a real decision point on its own once the
+      manual build path is proven.
+
 ## Later / needs discussion
 Bigger bets — worth a decision before building:
-- **Distributable build.** Ship a PyInstaller/Nuitka `.exe` (Repomix + Python 3.11
-  either bundled or clearly pre-flighted) so this stops being a checkout-and-run tool.
-  Likely the single highest-leverage step toward "useful desktop application" if the
-  goal is sharing it beyond this machine.
 - **Target the actual Claude Code subagent/skill format.** The tool currently emits
   three freeform Markdown files with no fixed schema. Claude Code specifically expects
   subagents as `.claude/agents/*.md` with YAML frontmatter (`name`, `description`,

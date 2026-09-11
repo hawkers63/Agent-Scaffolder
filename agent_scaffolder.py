@@ -17,7 +17,7 @@ import anthropic
 import keyring
 from tkinter import filedialog, messagebox
 
-APP_VERSION = "1.11"
+APP_VERSION = "1.12"
 
 # Credential Manager service for Anthropic API key (never store keys in files)
 SERVICE_NAME = "AgentScaffolderApp"
@@ -880,6 +880,22 @@ class ScaffoldingApp(ctk.CTk):
             if self._cancel_requested:
                 raise GenerationCancelled()
             if returncode != 0:
+                node_found = bool(
+                    shutil.which("node", path=env.get("PATH"))
+                    or shutil.which("npx", path=env.get("PATH"))
+                )
+                if not repomix_bin and not node_found:
+                    raise ScaffoldingError(
+                        "Repomix could not run because Node.js doesn't appear to be "
+                        'installed. Install Node.js from nodejs.org, then run '
+                        '"npm install -g repomix" in a terminal and try again.'
+                    )
+                if not repomix_bin:
+                    raise ScaffoldingError(
+                        'Repomix could not run. Node.js was found, but the "repomix" '
+                        'package doesn\'t appear to be installed. Run '
+                        '"npm install -g repomix" in a terminal and try again.'
+                    )
                 raise subprocess.CalledProcessError(returncode, "repomix")
 
             with open(xml_path, "r", encoding="utf-8") as f:

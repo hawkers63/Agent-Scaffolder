@@ -4,6 +4,18 @@
 
 Nothing yet.
 
+## 1.12 — 2026-09-11
+
+First step toward a distributable build (see `notes/notes_017.txt`).
+
+- **Clear error when Repomix/Node.js is missing.** If Repomix fails to run,
+  the app now checks whether Node.js (`node`/`npx`) and Repomix itself are
+  actually findable on PATH and shows an actionable message — "install
+  Node.js from nodejs.org, then run `npm install -g repomix`" — instead of
+  the previous generic "Repomix failed: Command 'repomix' returned
+  non-zero exit status 1." This only changes the failure-path message;
+  normal operation (Repomix found and working) is unchanged.
+
 ## 1.11 — 2026-09-11
 
 Batch-2 feature work, fourth and final release (see `notes/notes_015.txt`).
